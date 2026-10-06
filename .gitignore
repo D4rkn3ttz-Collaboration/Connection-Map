@@ -1,5 +1,7 @@
-# 통합 Supabase 주소 · 공개 열쇠, 로컬 시험용 가짜 자료. 공개 저장소에 넣지 않는다
-data/
+# data/ 안은 로컬 시험용 자료라 넣지 않는다 — 공개 열쇠 설정 파일 하나만 넣는다 (2026-10-06 결정, README 「공개 열쇠」)
+# 비밀 열쇠 · 쓰기 열쇠는 어디에도 넣지 않는다. 시험(lib.test.mjs 13)이 설정 파일에 공개 열쇠만 있는지 본다
+data/*
+!data/supabase.json
 node_modules/
 .DS_Store
 Thumbs.db

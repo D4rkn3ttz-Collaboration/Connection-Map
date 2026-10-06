@@ -2,6 +2,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   H_BASE,
@@ -194,4 +195,12 @@ test('12. 연결 공개 뷰 — 받는 칸은 뷰에 있는 칸뿐이고, 뷰가
   assert.equal(linksMissing(403, null), null);
   assert.equal(linksMissing(500, { code: 'XX000' }), null);
   assert.equal(linksMissing(400, { code: 'PGRST100' }), null);
+});
+
+test('13. 저장소에 든 설정 파일은 공개 열쇠뿐이다 — 비밀 열쇠 · JWT(옛 anon · service_role) · 다른 칸이 들어오면 실패 (2026-10-06)', () => {
+  const raw = JSON.parse(readFileSync(new URL('./data/supabase.json', import.meta.url), 'utf8'));
+  assert.deepEqual(Object.keys(raw).sort(), ['key', 'url'], '주소 · 열쇠 말고 다른 칸을 두지 않는다');
+  const cfg = parseSupabaseConfig(raw);
+  assert.match(cfg.key, /^sb_publishable_[A-Za-z0-9_-]+$/, '공개 열쇠(sb_publishable_) 꼴이어야 한다');
+  assert.ok(!/^sb_secret_/.test(cfg.key) && !/^eyJ/.test(cfg.key), '비밀 열쇠 · JWT 는 넣지 않는다');
 });
