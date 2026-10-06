@@ -1,0 +1,5 @@
+# 통합 Supabase 주소 · 공개 열쇠, 로컬 시험용 가짜 자료. 공개 저장소에 넣지 않는다
+data/
+node_modules/
+.DS_Store
+Thumbs.db

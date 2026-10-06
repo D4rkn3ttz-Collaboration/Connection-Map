@@ -1,0 +1,13 @@
+{
+  "name": "connection-map",
+  "private": true,
+  "description": "연결 3D — 오픈웹 · 다크웹 두 판과 연결선 (생태계 지도 설계서 4.4)",
+  "type": "module",
+  "scripts": {
+    "start": "python -m http.server 3004",
+    "test": "node --test lib.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
