@@ -419,7 +419,7 @@ function resize() {
   render();
 }
 
-// ── 확대 (휠 · 두 손가락 · + − 0 키 · 「전체 보기」) ─────────────────────────
+// ── 확대 (휠 · 두 손가락만 — 화면 단추는 두지 않는다) ─────────────────────────
 
 /** 화면 한 점 아래의 판 좌표 — 블록, 아니면 위 판 · 아래 판 바닥면. 못 찾으면 null */
 function pointUnder(cx, cy) {
@@ -442,19 +442,14 @@ function pointUnder(cx, cy) {
   return { x: local.x, y: local.y, z: local.z };
 }
 
-/** 확대를 z 로. 화면 점 (cx, cy) 를 짚으면 그 점이 제자리에 남는다 */
+/** 확대를 z 로. 짚은 화면 점 (cx, cy) 가 제자리에 남는다 */
 function zoomTo(z, cx, cy) {
   goal = null;
   const next = clampZoom(z);
-  const at = cx == null ? null : pointUnder(cx, cy);
+  const at = pointUnder(cx, cy);
   if (at) view.t = zoomToward(view.t, at, view.zoom, next);
   view.zoom = next;
   render();
-}
-
-function resetView() {
-  goal = { angle, zoom: 1, t: { ...home } };
-  kick();
 }
 
 canvas.addEventListener(
@@ -465,7 +460,7 @@ canvas.addEventListener(
   },
   { passive: false },
 );
-$('fitView').addEventListener('click', resetView);
+// 「전체 보기」 단추는 없다 — 물러나 확대 1 이 되면 바라보는 점이 처음 자리로 돌아온다(clampTarget)
 window.addEventListener('resize', resize);
 
 // ── 섬 이름표 · 끌기 · 누르기 ──────────────────────────────────────────────
@@ -587,12 +582,7 @@ canvas.addEventListener('pointerup', (ev) => {
   else if (selection) select(null);
 });
 window.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape' && selection) return select(null);
-  // 찾기 칸에 쓰는 글자는 건드리지 않는다
-  if (ev.target instanceof HTMLElement && ev.target.closest('input, textarea, select')) return;
-  if (ev.key === '+' || ev.key === '=') zoomTo(view.zoom * 1.25);
-  else if (ev.key === '-') zoomTo(view.zoom / 1.25);
-  else if (ev.key === '0') resetView();
+  if (ev.key === 'Escape' && selection) select(null);
 });
 
 // ── 회전 슬라이더 (설계서 4.4 「오른쪽 아래 슬라이더 0~360°」) ─────────────

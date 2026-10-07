@@ -274,7 +274,7 @@ test('14. 카메라는 기울기 고정으로 두 판을 다 담는다 — 화�
   assert.ok(fitCamera({ radius, gap, top, aspect: 0.5 }).dist > fitCamera({ radius, gap, top, aspect: 1.6 }).dist);
 });
 
-test('15. 확대 — 범위 안에서만, 휠 위로 · 손가락 벌리기는 다가가기, 짚은 점은 화면 제자리 (2026-10-08)', () => {
+test('15. 확대 — 범위 안에서만, 휠 위로 · 손가락 벌리기는 다가가기, 짚은 점은 화면 제자리 (2026-10-07)', () => {
   assert.equal(clampZoom(100), ZOOM_MAX);
   assert.equal(clampZoom(0), ZOOM_MIN);
   assert.equal(clampZoom(NaN), 1);
@@ -300,7 +300,7 @@ test('15. 확대 — 범위 안에서만, 휠 위로 · 손가락 벌리기는 �
   assert.deepEqual(zoomToward(T0, P, 2, 2), T0, '확대가 그대로면 바라보는 점도 그대로');
 });
 
-test('16. 바라보는 점은 판 안에 묶이고, 찾은 영토는 옆 · 뒤쪽일 때만 앞으로 돌린다 (2026-10-08)', () => {
+test('16. 바라보는 점은 판 안에 묶이고, 찾은 영토는 옆 · 뒤쪽일 때만 앞으로 돌린다 (2026-10-07)', () => {
   const home = { x: 0, y: 40, z: 0 };
   const box = { radius: 50, ylo: 0, yhi: 95 };
   assert.deepEqual(clampTarget({ x: 30, y: 0, z: 30 }, home, { ...box, zoom: 1 }), home, '확대 1 이면 처음 자리');
