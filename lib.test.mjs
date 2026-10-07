@@ -227,7 +227,7 @@ test('13. 저장소에 든 설정 파일은 공개 열쇠뿐이다 — 비밀 �
   assert.ok(!/^sb_secret_/.test(cfg.key) && !/^eyJ/.test(cfg.key), '비밀 열쇠 · JWT 는 넣지 않는다');
 });
 
-test('14. 카메라는 기울기 고정으로 두 판을 다 담는다 — 화면을 거의 채우고 위아래 여백이 같다 (2026-10-08)', () => {
+test('14. 카메라는 기울기 고정으로 두 판을 다 담는다 — 화면을 거의 채우고 위아래 여백이 같다 (2026-10-07)', () => {
   const look = { dist: 100, lookY: 20, aspect: 1.6 };
   const c = projectPoint([0, 20, 0], look);
   assert.ok(Math.abs(c.x) < 1e-9 && Math.abs(c.y) < 1e-9, '바라보는 점은 화면 가운데');
