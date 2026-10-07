@@ -19,12 +19,17 @@
 import * as THREE from 'three';
 import {
   DARK_TABLE_SELECT,
+  FOV_DEG,
+  GAP_RATIO,
   H_FLOOR,
+  H_TIERS,
   LINKS_VIEW_SELECT,
+  TILT_DEG,
   axialToXZ,
   blockHeights,
   centerOf,
   edgeSegments,
+  fitCamera,
   linksMissing,
   linksOf,
   matchLinks,
@@ -64,7 +69,7 @@ const canvas = $('scene');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(30, 1, 0.5, 6000);
+const camera = new THREE.PerspectiveCamera(FOV_DEG, 1, 0.5, 6000);
 scene.add(new THREE.HemisphereLight(0xffffff, 0x7d88a8, 1.7));
 const sun = new THREE.DirectionalLight(0xffffff, 1.5);
 sun.position.set(-60, 160, 90);
@@ -79,7 +84,7 @@ const plates = { dark: null, open: null };
 let lines = [];
 let selection = null;
 let angle = START_ANGLE;
-let fit = { radius: 40, gap: 26 };
+let fit = { radius: 40, gap: 72 };
 
 /**
  * 판 하나. 칸마다 육각 기둥 하나를 InstancedMesh 로 그린다.
@@ -337,18 +342,16 @@ function render() {
 
 // ── 화면 크기 · 카메라 ─────────────────────────────────────────────────────
 
-/** 기울기는 고정이다 (설계서 4.4). 두 판이 다 들어오게 거리만 맞춘다 */
+/** 기울기는 고정이다 (설계서 4.4). 두 판이 다 들어오게 거리와 바라보는 높이만 맞춘다(lib.js fitCamera) */
 function resize() {
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  const tilt = (30 * Math.PI) / 180;
-  const need = fit.radius * 1.7 + fit.gap * 0.7;
-  const dist = (need / 2 / Math.tan((camera.fov * Math.PI) / 360)) / Math.min(1, camera.aspect * 0.75);
-  const mid = fit.gap / 2;
-  camera.position.set(0, mid + dist * Math.sin(tilt), dist * Math.cos(tilt));
-  camera.lookAt(0, mid, 0);
+  const tilt = (TILT_DEG * Math.PI) / 180;
+  const { dist, lookY } = fitCamera({ radius: fit.radius, gap: fit.gap, top: H_TIERS[H_TIERS.length - 1], aspect: camera.aspect });
+  camera.position.set(0, lookY + dist * Math.sin(tilt), dist * Math.cos(tilt));
+  camera.lookAt(0, lookY, 0);
   camera.updateProjectionMatrix();
   render();
 }
@@ -705,7 +708,7 @@ async function main() {
   }
 
   const radius = Math.max(dark ? plateBounds(dark).radius : 30, open ? plateBounds(open).radius : 0);
-  fit = { radius, gap: radius * 0.9 };
+  fit = { radius, gap: radius * GAP_RATIO };
   if (dark) plates.dark = buildPlate(dark, 0, radius);
   if (open) plates.open = buildPlate(open, fit.gap, radius);
   else {

@@ -12,11 +12,23 @@
 
 export const SQ3 = Math.sqrt(3);
 
-/** 섬 가운데가 높게 쌓는 블록 높이 (설계서 3.5 「3D 블록 높이는 표시 규칙이며 데이터와 무관」) */
-export const H_BASE = 0.8;
-export const H_RISE = 6;
+/**
+ * 섬 가운데가 높게 쌓는 블록 높이 — 층(계단)마다 하나. 앞이 가장자리, 뒤가 가운데다
+ * (설계서 3.5 「3D 블록 높이는 표시 규칙이며 데이터와 무관」). 매끈한 경사면은 그물처럼 보인다는 피드백으로
+ * 피그마 「③-0 기본 · 원형 판넬 · 쌓인 블록」 처럼 평평한 층 몇 단으로 끊었다(2026-10-08)
+ */
+export const H_TIERS = [0.8, 2, 3.2];
 /** 고른 것과 상관없는 블록이 내려앉는 높이 (설계서 4.4 「바닥으로 내려가며 흐리게」) */
 export const H_FLOOR = 0.12;
+
+/**
+ * 두 판 사이 높이 = 판 반지름 × 이 비율. 피그마 「③-0」 화면에서 잰 값이다 — 판 둘레 타원의 가로 반지름과
+ * 두 판 가운데 사이 화면 거리, 기울기 30° 로 거꾸로 풀면 약 1.8 이 나온다(2026-10-08, 전에는 0.9)
+ */
+export const GAP_RATIO = 1.8;
+/** 카메라 기울기(설계서 4.4 「기울기 고정」)와 세로 화각 */
+export const TILT_DEG = 30;
+export const FOV_DEG = 30;
 
 const RE_COLOR = /^#[0-9A-Fa-f]{6}$/;
 const RE_ISLAND = /^[A-Z][A-Z_]{0,31}$/;
@@ -130,9 +142,18 @@ export function plateBounds(layout) {
 }
 
 /**
- * 칸마다 블록 높이. **섬 가운데가 높다** — 섬 칸들의 무게중심에서 멀수록 낮아진다.
+ * 섬 가운데에서 떨어진 정도(0 = 무게중심, 1 = 가장 먼 칸) → 층 번호(0 = 가장자리 층).
+ * 넓이로 나눈다 — 층마다 섬 넓이가 비슷하게 돌아가 가운데 층도 몇 칸으로 쪼그라들지 않는다
+ */
+export function tierOf(dist, tiers = H_TIERS.length) {
+  const k = Math.floor((1 - dist * dist) * tiers);
+  return Math.min(tiers - 1, Math.max(0, k));
+}
+
+/**
+ * 칸마다 블록 높이. **섬 가운데가 높다** — 섬 칸들의 무게중심에서 멀수록 한 층씩 낮아진다.
  * 데이터와 상관없는 표시 규칙이다(설계서 3.5). 같은 칸이면 늘 같은 높이다.
- * @returns {Map<string, number>} "q,r" → 높이
+ * @returns {Map<string, number>} "q,r" → 높이 (H_TIERS 값 가운데 하나)
  */
 export function blockHeights(layout) {
   const out = new Map();
@@ -147,11 +168,80 @@ export function blockHeights(layout) {
       return v;
     });
     cells.forEach(([q, r], i) => {
-      const t = dmax > 0 ? 1 - d[i] / dmax : 1;
-      out.set(`${q},${r}`, H_BASE + H_RISE * Math.pow(t, 0.9));
+      out.set(`${q},${r}`, H_TIERS[tierOf(dmax > 0 ? d[i] / dmax : 0)]);
     });
   }
   return out;
+}
+
+/**
+ * 판 위 한 점을 카메라 화면 좌표(-1 ~ 1)로. 카메라는 x = 0 에서 기울기 tilt 로 (0, lookY, 0) 을 내려다본다 —
+ * three.js PerspectiveCamera(fov 는 세로 화각)와 같은 식이다. 카메라 뒤에 있는 점은 null
+ * @param p    [x, y, z] (판 가운데가 원점, 위가 +y, 카메라 쪽이 +z)
+ * @param cam  {{dist, lookY, aspect, fov?, tilt?}}
+ */
+export function projectPoint([x, y, z], { dist, lookY, aspect, fov = FOV_DEG, tilt = TILT_DEG }) {
+  const t = (tilt * Math.PI) / 180;
+  const s = Math.sin(t);
+  const c = Math.cos(t);
+  // 카메라에서 본 점. 앞(f) = (0, -s, -c), 위(u) = (0, c, -s), 오른쪽 = +x
+  const ry = y - lookY - dist * s;
+  const rz = z - dist * c;
+  const depth = -s * ry - c * rz;
+  if (depth <= 1e-6) return null;
+  const f = Math.tan((fov * Math.PI) / 360);
+  return { x: x / (depth * f * aspect), y: (c * ry - s * rz) / (depth * f) };
+}
+
+/**
+ * 두 판이 다 들어오는 카메라 자리. 기울기는 고정이고(설계서 4.4) 거리와 바라보는 높이만 정한다.
+ * 두 판 둘레(블록 꼭대기 높이까지)를 원근 그대로 화면에 투영해 가장 바깥 점이 화면 끝에서 margin 만큼 안에 들게 하고,
+ * 위아래 여백이 같게 바라보는 높이를 옮긴다. 판은 둥글어서 어느 각도로 돌려도 같다
+ * @param o {{radius, gap, top, aspect, margin?}}  top = 블록 가장 높은 곳
+ * @returns {{dist, lookY}}
+ */
+export function fitCamera({ radius, gap, top = 0, aspect, margin = 0.06, fov = FOV_DEG, tilt = TILT_DEG }) {
+  const pts = [];
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * 2 * Math.PI;
+    const x = radius * Math.cos(a);
+    const z = radius * Math.sin(a);
+    for (const y of [-0.8, top, gap - 0.8, gap + top]) pts.push([x, y, z]);
+  }
+  const extent = (dist, lookY) => {
+    let w = 0;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (const p of pts) {
+      const v = projectPoint(p, { dist, lookY, aspect, fov, tilt });
+      if (!v) return { w: Infinity, lo: -Infinity, hi: Infinity };
+      w = Math.max(w, Math.abs(v.x));
+      lo = Math.min(lo, v.y);
+      hi = Math.max(hi, v.y);
+    }
+    return { w, lo, hi };
+  };
+  const span = (e) => Math.max(e.w, (e.hi - e.lo) / 2);
+  // 거리는 이분 찾기로 — 멀어질수록 화면 속 크기는 줄어든다
+  const fitDist = (lookY) => {
+    let lo = radius * 0.2;
+    let hi = radius * 60;
+    for (let k = 0; k < 50; k++) {
+      const mid = (lo + hi) / 2;
+      if (span(extent(mid, lookY)) > 1 - margin) lo = mid;
+      else hi = mid;
+    }
+    return hi;
+  };
+  let lookY = gap / 2;
+  let dist = fitDist(lookY);
+  for (let round = 0; round < 4; round++) {
+    // 화면 위아래 여백을 맞춘다. 화면 y 1 은 그 거리에서 대략 dist·tan(fov/2) 높이다
+    const e = extent(dist, lookY);
+    lookY += ((e.hi + e.lo) / 2) * dist * Math.tan((fov * Math.PI) / 360) / Math.cos((tilt * Math.PI) / 180);
+    dist = fitDist(lookY);
+  }
+  return { dist, lookY };
 }
 
 /** axial 이웃 여섯. i 번째 이웃은 판 위 각도 NEIGHBOR_DEG[i] 쪽이다 */

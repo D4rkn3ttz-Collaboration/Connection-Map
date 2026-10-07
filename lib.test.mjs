@@ -5,20 +5,23 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
-  H_BASE,
-  H_RISE,
+  GAP_RATIO,
+  H_TIERS,
   LINKS_VIEW_SELECT,
   axialToXZ,
   blockHeights,
   edgeSegments,
+  fitCamera,
   linksMissing,
   linksOf,
   matchLinks,
   parseLayout,
   parseSupabaseConfig,
   plateBounds,
+  projectPoint,
   rowsToLayout,
   searchTerritories,
+  tierOf,
 } from './lib.js';
 
 // 가짜 이름만 쓴다
@@ -72,18 +75,37 @@ test('3. 판이 바뀐 자료 · 꼴이 아닌 자료는 멈춘다', () => {
   assert.throws(() => parseLayout({ ...DARK, grid: { coords: 'offset' } }, 'dark'), /axial/);
 });
 
-test('4. 섬 가운데 칸이 가장 높고 가장자리가 가장 낮다', () => {
+test('4. 섬 가운데 칸이 가장 높고 가장자리가 가장 낮다 — 높이는 층 몇 단으로만', () => {
+  const TOP = H_TIERS[H_TIERS.length - 1];
   const lay = parseLayout({
     web: 'dark',
     territories: [{ island_id: 'FORUM', territory_id: 'a', territory_name: 'A',
       cells: [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, -1], [-1, 1]] }],
   }, 'dark');
   const h = blockHeights(lay);
-  assert.ok(Math.abs(h.get('0,0') - (H_BASE + H_RISE)) < 1e-9);
-  for (const k of ['1,0', '-1,0', '0,1', '0,-1', '1,-1', '-1,1']) assert.ok(Math.abs(h.get(k) - H_BASE) < 1e-9, k);
+  assert.equal(h.get('0,0'), TOP);
+  for (const k of ['1,0', '-1,0', '0,1', '0,-1', '1,-1', '-1,1']) assert.equal(h.get(k), H_TIERS[0], k);
   // 칸이 하나인 섬은 가장 높다
   const one = blockHeights(parseLayout(DARK, 'dark'));
-  assert.ok(Math.abs(one.get('10,0') - (H_BASE + H_RISE)) < 1e-9);
+  assert.equal(one.get('10,0'), TOP);
+
+  // 반지름 4 육각 섬(61칸): 층 값만 나오고, 층마다 칸이 있고, 가운데에서 멀어질수록 낮아지기만 한다
+  const cells = [];
+  for (let q = -4; q <= 4; q++) for (let r = -4; r <= 4; r++) if (Math.abs(q + r) <= 4) cells.push([q, r]);
+  const big = blockHeights(parseLayout({ web: 'dark', territories: [
+    { island_id: 'FORUM', territory_id: 'a', territory_name: 'A', cells: cells.slice(0, 30) },
+    { island_id: 'FORUM', territory_id: 'b', territory_name: 'B', cells: cells.slice(30) }] }, 'dark'));
+  assert.equal(big.size, 61);
+  const used = new Set(big.values());
+  for (const v of used) assert.ok(H_TIERS.includes(v), v);
+  assert.equal(used.size, H_TIERS.length, '층마다 칸이 있다');
+  const byDist = cells.map(([q, r]) => [Math.hypot(axialToXZ(q, r).x, axialToXZ(q, r).z), big.get(`${q},${r}`)]).sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < byDist.length; i++) assert.ok(byDist[i][1] <= byDist[i - 1][1], '멀어지는데 높아졌다');
+  // 층 나누기: 0 은 가운데 층, 1 은 가장자리 층, 범위를 넘지 않는다
+  assert.equal(tierOf(0), H_TIERS.length - 1);
+  assert.equal(tierOf(1), 0);
+  assert.equal(tierOf(0.99, 4), 0);
+  assert.equal(tierOf(0.1, 4), 3);
 });
 
 test('5. 영토 경계는 다른 영토와 맞닿은 변과 바깥 변이다', () => {
@@ -203,4 +225,38 @@ test('13. 저장소에 든 설정 파일은 공개 열쇠뿐이다 — 비밀 �
   const cfg = parseSupabaseConfig(raw);
   assert.match(cfg.key, /^sb_publishable_[A-Za-z0-9_-]+$/, '공개 열쇠(sb_publishable_) 꼴이어야 한다');
   assert.ok(!/^sb_secret_/.test(cfg.key) && !/^eyJ/.test(cfg.key), '비밀 열쇠 · JWT 는 넣지 않는다');
+});
+
+test('14. 카메라는 기울기 고정으로 두 판을 다 담는다 — 화면을 거의 채우고 위아래 여백이 같다 (2026-10-08)', () => {
+  const look = { dist: 100, lookY: 20, aspect: 1.6 };
+  const c = projectPoint([0, 20, 0], look);
+  assert.ok(Math.abs(c.x) < 1e-9 && Math.abs(c.y) < 1e-9, '바라보는 점은 화면 가운데');
+  assert.equal(projectPoint([0, 20 + 100 * Math.sin(Math.PI / 6) + 1, 100 * Math.cos(Math.PI / 6) + 5], look), null, '카메라 뒤는 null');
+  assert.ok(projectPoint([0, 0, 30], look).y < projectPoint([0, 0, -30], look).y, '카메라 쪽 가장자리가 화면 아래');
+
+  const radius = 40;
+  const gap = radius * GAP_RATIO;
+  const top = H_TIERS[H_TIERS.length - 1];
+  for (const aspect of [16 / 9, 1, 0.5]) {
+    const cam = fitCamera({ radius, gap, top, aspect });
+    let w = 0;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 0; i < 360; i += 3) {
+      const a = (i * Math.PI) / 180;
+      for (const y of [-0.8, top, gap - 0.8, gap + top]) {
+        const v = projectPoint([radius * Math.cos(a), y, radius * Math.sin(a)], { ...cam, aspect });
+        assert.ok(v, '판이 카메라 뒤로 가지 않는다');
+        w = Math.max(w, Math.abs(v.x));
+        lo = Math.min(lo, v.y);
+        hi = Math.max(hi, v.y);
+      }
+    }
+    const span = Math.max(w, (hi - lo) / 2);
+    assert.ok(span <= 0.95 && span > 0.9, `화면 끝에서 6% 안 (aspect ${aspect}: ${span.toFixed(3)})`);
+    assert.ok(Math.abs(hi + lo) < 0.02, `위아래 여백이 같다 (aspect ${aspect}: ${(hi + lo).toFixed(3)})`);
+  }
+  // 판 사이가 넓을수록 · 화면이 좁을수록 멀리서 본다
+  assert.ok(fitCamera({ radius, gap: radius * 0.9, top, aspect: 1.6 }).dist < fitCamera({ radius, gap, top, aspect: 1.6 }).dist);
+  assert.ok(fitCamera({ radius, gap, top, aspect: 0.5 }).dist > fitCamera({ radius, gap, top, aspect: 1.6 }).dist);
 });
