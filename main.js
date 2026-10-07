@@ -19,6 +19,7 @@
 import * as THREE from 'three';
 import {
   DARK_TABLE_SELECT,
+  FOCUS_ZOOM,
   FOV_DEG,
   GAP_RATIO,
   H_FLOOR,
@@ -28,16 +29,25 @@ import {
   axialToXZ,
   blockHeights,
   centerOf,
+  clampTarget,
+  clampZoom,
   edgeSegments,
   fitCamera,
+  focusAngle,
   linksMissing,
   linksOf,
   matchLinks,
   parseLayout,
   parseSupabaseConfig,
+  pinchZoom,
   plateBounds,
+  rayPlaneY,
+  rotateY,
   rowsToLayout,
   searchTerritories,
+  shortestTurn,
+  wheelZoom,
+  zoomToward,
 } from './lib.js';
 
 const params = new URLSearchParams(location.search);
@@ -85,6 +95,14 @@ let lines = [];
 let selection = null;
 let angle = START_ANGLE;
 let fit = { radius: 40, gap: 72 };
+/**
+ * 보는 자리. 확대 1 은 두 판이 다 들어오는 거리(home · fitDist 는 resize 가 정한다). t 는 바라보는 점(판 좌표)이다.
+ * goal 은 찾은 영토로 옮겨 가는 중일 때 갈 곳 — 사람이 끌거나 휠을 굴리면 버린다
+ */
+const view = { zoom: 1, t: { x: 0, y: 36, z: 0 } };
+let home = { x: 0, y: 36, z: 0 };
+let fitDist = 100;
+let goal = null;
 
 /**
  * 판 하나. 칸마다 육각 기둥 하나를 InstancedMesh 로 그린다.
@@ -281,6 +299,12 @@ function kick() {
 function snap() {
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
+  if (goal) {
+    setAngle(goal.angle);
+    view.zoom = goal.zoom;
+    view.t = goal.t;
+    goal = null;
+  }
   for (const p of Object.values(plates)) {
     if (!p) continue;
     for (const c of p.cells) {
@@ -326,6 +350,7 @@ function frame(now) {
     }
     writeInstances(p);
   }
+  if (goal && stepView(k)) moving = true;
   render();
   if (moving) {
     raf = requestAnimationFrame(frame);
@@ -336,25 +361,111 @@ function frame(now) {
 function render() {
   root.rotation.y = (angle * Math.PI) / 180;
   root.updateMatrixWorld(true);
+  placeCamera();
   renderer.render(scene, camera);
   placeLabels();
 }
 
+/** goal 쪽으로 한 걸음. 아직 움직이면 true */
+function stepView(k) {
+  const turn = shortestTurn(angle, goal.angle);
+  const dz = Math.log(goal.zoom / view.zoom);
+  const d = { x: goal.t.x - view.t.x, y: goal.t.y - view.t.y, z: goal.t.z - view.t.z };
+  if (Math.abs(turn) < 0.05 && Math.abs(dz) < 0.002 && Math.hypot(d.x, d.y, d.z) < 0.02) {
+    setAngle(goal.angle);
+    view.zoom = goal.zoom;
+    view.t = goal.t;
+    goal = null;
+    return false;
+  }
+  setAngle(angle + turn * k);
+  view.zoom *= Math.exp(dz * k);
+  view.t = { x: view.t.x + d.x * k, y: view.t.y + d.y * k, z: view.t.z + d.z * k };
+  return true;
+}
+
+/** 바라보는 점이 갈 수 있는 곳 — 판 둘레 안, 아래 판 바닥 ~ 위 판 꼭대기 (lib.js clampTarget) */
+function clampView(t, zoom) {
+  return clampTarget(t, home, { radius: fit.radius, ylo: 0, yhi: fit.gap + H_TIERS[H_TIERS.length - 1], zoom });
+}
+
+/** 카메라를 바라보는 점에서 기울기 고정 방향으로 fitDist / 확대 만큼 떨어뜨린다 */
+function placeCamera() {
+  view.t = clampView(view.t, view.zoom);
+  const w = rotateY(view.t, angle);
+  const tilt = (TILT_DEG * Math.PI) / 180;
+  const d = fitDist / view.zoom;
+  camera.position.set(w.x, view.t.y + d * Math.sin(tilt), w.z + d * Math.cos(tilt));
+  camera.lookAt(w.x, view.t.y, w.z);
+}
+
 // ── 화면 크기 · 카메라 ─────────────────────────────────────────────────────
 
-/** 기울기는 고정이다 (설계서 4.4). 두 판이 다 들어오게 거리와 바라보는 높이만 맞춘다(lib.js fitCamera) */
+/**
+ * 기울기는 고정이다 (설계서 4.4). 두 판이 다 들어오는 거리와 바라보는 높이를 확대 1 로 삼는다(lib.js fitCamera).
+ * 카메라 자리는 render 때마다 placeCamera 가 정한다
+ */
 function resize() {
   const w = canvas.clientWidth || window.innerWidth;
   const h = canvas.clientHeight || window.innerHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  const tilt = (TILT_DEG * Math.PI) / 180;
   const { dist, lookY } = fitCamera({ radius: fit.radius, gap: fit.gap, top: H_TIERS[H_TIERS.length - 1], aspect: camera.aspect });
-  camera.position.set(0, lookY + dist * Math.sin(tilt), dist * Math.cos(tilt));
-  camera.lookAt(0, lookY, 0);
+  const moved = { x: view.t.x - home.x, y: view.t.y - home.y, z: view.t.z - home.z };
+  home = { x: 0, y: lookY, z: 0 };
+  view.t = { x: home.x + moved.x, y: home.y + moved.y, z: home.z + moved.z };
+  fitDist = dist;
   camera.updateProjectionMatrix();
   render();
 }
+
+// ── 확대 (휠 · 두 손가락 · + − 0 키 · 「전체 보기」) ─────────────────────────
+
+/** 화면 한 점 아래의 판 좌표 — 블록, 아니면 위 판 · 아래 판 바닥면. 못 찾으면 null */
+function pointUnder(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  ptr.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const meshes = Object.values(plates).filter(Boolean).map((p) => p.mesh);
+  let hit = ray.intersectObjects(meshes, false)[0]?.point ?? null;
+  if (!hit) {
+    for (const y of [fit.gap, 0]) {
+      const q = rayPlaneY(ray.ray.origin, ray.ray.direction, y);
+      if (q && Math.hypot(q.x, q.z) <= fit.radius) {
+        hit = new THREE.Vector3(q.x, q.y, q.z);
+        break;
+      }
+    }
+  }
+  if (!hit) return null;
+  const local = root.worldToLocal(hit.clone());
+  return { x: local.x, y: local.y, z: local.z };
+}
+
+/** 확대를 z 로. 화면 점 (cx, cy) 를 짚으면 그 점이 제자리에 남는다 */
+function zoomTo(z, cx, cy) {
+  goal = null;
+  const next = clampZoom(z);
+  const at = cx == null ? null : pointUnder(cx, cy);
+  if (at) view.t = zoomToward(view.t, at, view.zoom, next);
+  view.zoom = next;
+  render();
+}
+
+function resetView() {
+  goal = { angle, zoom: 1, t: { ...home } };
+  kick();
+}
+
+canvas.addEventListener(
+  'wheel',
+  (ev) => {
+    ev.preventDefault();
+    zoomTo(wheelZoom(view.zoom, ev.deltaY, ev.deltaMode), ev.clientX, ev.clientY);
+  },
+  { passive: false },
+);
+$('fitView').addEventListener('click', resetView);
 window.addEventListener('resize', resize);
 
 // ── 섬 이름표 · 끌기 · 누르기 ──────────────────────────────────────────────
@@ -411,11 +522,42 @@ function pick(ev) {
 
 const tip = $('tip');
 let drag = null;
+/** 화면에 닿은 손가락(포인터)들. 둘이면 벌리고 오므리기로 확대한다 */
+const touches = new Map();
+let pinch = null;
+const spread = () => {
+  const [a, b] = [...touches.values()];
+  return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+};
 canvas.addEventListener('pointerdown', (ev) => {
-  drag = { x: ev.clientX, start: angle, moved: false };
+  touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
   canvas.setPointerCapture(ev.pointerId);
+  if (touches.size === 2) {
+    // 두 번째 손가락 — 돌리기 · 누르기를 멈추고 확대로
+    drag = null;
+    pinch = { d0: spread().d, z0: view.zoom };
+    goal = null;
+    return;
+  }
+  if (touches.size > 2 || pinch) return;
+  goal = null;
+  drag = { x: ev.clientX, start: angle, moved: false };
+});
+const lift = (ev) => {
+  touches.delete(ev.pointerId);
+  if (touches.size < 2) pinch = null;
+};
+canvas.addEventListener('pointercancel', (ev) => {
+  lift(ev);
+  drag = null;
 });
 canvas.addEventListener('pointermove', (ev) => {
+  if (touches.has(ev.pointerId)) touches.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+  if (pinch && touches.size === 2) {
+    const s = spread();
+    zoomTo(pinchZoom(pinch.z0, pinch.d0, s.d), s.x, s.y);
+    return;
+  }
   if (drag) {
     const dx = ev.clientX - drag.x;
     if (Math.abs(dx) > 4) drag.moved = true;
@@ -436,6 +578,7 @@ canvas.addEventListener('pointerleave', () => {
   tip.hidden = true;
 });
 canvas.addEventListener('pointerup', (ev) => {
+  lift(ev);
   const d = drag;
   drag = null;
   if (!d || d.moved) return;
@@ -444,7 +587,12 @@ canvas.addEventListener('pointerup', (ev) => {
   else if (selection) select(null);
 });
 window.addEventListener('keydown', (ev) => {
-  if (ev.key === 'Escape' && selection) select(null);
+  if (ev.key === 'Escape' && selection) return select(null);
+  // 찾기 칸에 쓰는 글자는 건드리지 않는다
+  if (ev.target instanceof HTMLElement && ev.target.closest('input, textarea, select')) return;
+  if (ev.key === '+' || ev.key === '=') zoomTo(view.zoom * 1.25);
+  else if (ev.key === '-') zoomTo(view.zoom / 1.25);
+  else if (ev.key === '0') resetView();
 });
 
 // ── 회전 슬라이더 (설계서 4.4 「오른쪽 아래 슬라이더 0~360°」) ─────────────
@@ -452,9 +600,10 @@ window.addEventListener('keydown', (ev) => {
 const slider = $('angle');
 const angleOut = $('angleOut');
 function setAngle(a) {
-  angle = ((Math.round(a) % 360) + 360) % 360;
-  slider.value = String(angle);
-  angleOut.textContent = `${angle}°`;
+  angle = ((a % 360) + 360) % 360;
+  const deg = Math.round(angle) % 360;
+  slider.value = String(deg);
+  angleOut.textContent = `${deg}°`;
   render();
 }
 slider.addEventListener('input', () => setAngle(Number(slider.value)));
@@ -577,7 +726,7 @@ function showResults() {
       b.type = 'button';
       b.append(el('span', null, `${WEB_LABEL[h.web]} · ${h.islandName}`));
       b.addEventListener('click', () => {
-        selectTerritory(h.web, h.id);
+        showFound(h.web, h.id);
         search.value = '';
         results.replaceChildren();
       });
@@ -592,10 +741,25 @@ search.addEventListener('keydown', (ev) => {
   if (ev.key !== 'Enter') return;
   const [h] = showResults();
   if (!h) return;
-  selectTerritory(h.web, h.id);
+  showFound(h.web, h.id);
   search.value = '';
   results.replaceChildren();
 });
+
+/**
+ * 찾은 영토 보여 주기 — 고르고, 판 옆 · 뒤쪽이면 앞으로 돌리고, 그 영토로 다가간다(이미 더 가까우면 그대로).
+ * 다시 눌러도 고르기가 풀리지 않는다(찾기는 늘 「이것을 보여 줘」 다)
+ */
+function showFound(web, id) {
+  const p = plates[web];
+  if (!p?.byTerritory.has(id)) return;
+  if (!(selection?.kind === 'territory' && selection.web === web && selection.id === id)) select({ kind: 'territory', web, id });
+  const at = territoryAnchor(p, id, 'top');
+  const zoom = Math.max(view.zoom, FOCUS_ZOOM);
+  // 갈 곳도 묶어 둔다 — 안 묶으면 판 가장자리 영토에서 카메라가 묶임에 걸려 끝없이 다가가려 한다
+  goal = { angle: focusAngle(at.x, at.z, angle), zoom, t: clampView({ x: at.x, y: at.y, z: at.z }, zoom) };
+  kick();
+}
 
 // ── 자료 받기 ───────────────────────────────────────────────────────────────
 

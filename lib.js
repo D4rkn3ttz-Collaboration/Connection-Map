@@ -245,6 +245,103 @@ export function fitCamera({ radius, gap, top = 0, aspect, margin = 0.06, fov = F
   return { dist, lookY };
 }
 
+// ── 확대 · 찾은 영토 보여 주기 (2026-10-08) ────────────────────────────────
+//
+// 기울기는 그대로 두고(설계서 4.4 「기울기 고정」) 카메라 거리와 바라보는 점만 바꾼다.
+// 확대 1 은 fitCamera 가 정한 「두 판이 다 들어오는」 거리이고, 거리는 확대에 반비례한다.
+// 바라보는 점은 판 좌표(돌아가는 판 기준)로 들고 있다 — 판을 돌리면 그 점을 가운데에 둔 채 돈다.
+
+/** 확대 범위. 1 보다 작으면 두 판보다 조금 더 멀리, 크면 가까이 */
+export const ZOOM_MIN = 0.8;
+export const ZOOM_MAX = 6;
+/** 찾은 영토로 다가갈 때 확대 — 섬 하나와 그 둘레가 한 화면에 든다 */
+export const FOCUS_ZOOM = 2.6;
+/** 찾은 영토가 앞쪽에서 이 각도 안에 있으면 판을 돌리지 않는다 */
+export const FRONT_DEG = 60;
+
+export function clampZoom(z) {
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number.isFinite(z) ? z : 1));
+}
+
+/** 휠 한 번 → 새 확대. 위로 굴리면(deltaY 음수) 다가간다. 줄 · 쪽 단위(deltaMode 1 · 2)도 픽셀로 바꾼다 */
+export function wheelZoom(zoom, deltaY, deltaMode = 0) {
+  const px = (Number(deltaY) || 0) * (deltaMode === 1 ? 16 : deltaMode === 2 ? 400 : 1);
+  return clampZoom(zoom * Math.exp(-Math.max(-300, Math.min(300, px)) * 0.0015));
+}
+
+/** 두 손가락 사이가 d0 → d1 이 되면. 벌리면 다가간다 */
+export function pinchZoom(zoom, d0, d1) {
+  return d0 > 0 && d1 > 0 ? clampZoom((zoom * d1) / d0) : clampZoom(zoom);
+}
+
+/**
+ * 한 점을 짚고 다가가기 · 물러나기 — 짚은 점이 화면에서 제자리에 남도록 바라보는 점을 옮긴다(지도 앱의 휠 확대와 같다).
+ * 기울기가 고정이라 바라보는 점 → 카메라 방향은 그대로고 거리만 바뀐다. 바라보는 점 T, 짚은 점 P, 거리 d → d' 이면
+ * 카메라도 P 와 이은 선 위에 남는다: T' = P + (T − P)·d'/d, d'/d = zoomFrom/zoomTo
+ */
+export function zoomToward(target, point, zoomFrom, zoomTo) {
+  const k = zoomFrom / zoomTo;
+  return {
+    x: point.x + (target.x - point.x) * k,
+    y: point.y + (target.y - point.y) * k,
+    z: point.z + (target.z - point.z) * k,
+  };
+}
+
+/**
+ * 바라보는 점이 판 밖으로 나가지 않게 묶는다. 확대 1 이하면 처음 자리(home)에 붙고, 다가갈수록 멀리 갈 수 있다
+ * (2 × (1 − 1/확대) 만큼, 확대 2 부터는 판 끝 · 바닥까지). 짚은 점을 향해 다가가면 바라보는 점은 1 − 1/확대 만큼만
+ * 움직이므로 판 위 점은 묶임에 안 걸리고, 찾은 영토는 판 가장자리여도 화면 가운데에 온다. 물러나면 저절로 처음 화면으로 돌아온다
+ * @param o {{radius, ylo, yhi, zoom}} ylo · yhi = 바라보는 점이 갈 수 있는 높이(아래 판 바닥 ~ 위 판 꼭대기)
+ */
+export function clampTarget(t, home, { radius, ylo, yhi, zoom }) {
+  const free = Math.min(1, 2 * Math.max(0, 1 - 1 / Math.max(zoom, 1)));
+  let dx = t.x - home.x;
+  let dz = t.z - home.z;
+  const r = Math.hypot(dx, dz);
+  const rmax = radius * free;
+  if (r > rmax) {
+    const s = r > 0 ? rmax / r : 0;
+    dx *= s;
+    dz *= s;
+  }
+  const lo = home.y + (Math.min(ylo, home.y) - home.y) * free;
+  const hi = home.y + (Math.max(yhi, home.y) - home.y) * free;
+  return { x: home.x + dx, y: Math.min(hi, Math.max(lo, t.y)), z: home.z + dz };
+}
+
+/** 판 좌표 → 판을 deg 만큼 돌린 뒤 자리. three.js rotation.y 와 같은 방향이다 */
+export function rotateY({ x, z }, deg) {
+  const a = (deg * Math.PI) / 180;
+  return { x: x * Math.cos(a) + z * Math.sin(a), z: -x * Math.sin(a) + z * Math.cos(a) };
+}
+
+/** from → to 로 가장 짧게 도는 각(도, -180 ~ 180) */
+export function shortestTurn(from, to) {
+  return ((((to - from) % 360) + 540) % 360) - 180;
+}
+
+/**
+ * 판 위 점 (x, z) 를 보여 줄 회전 각(0 ~ 360). 지금 각에서 그 점이 앞(카메라 쪽)에서 FRONT_DEG 안이면 그대로,
+ * 아니면(옆 · 뒤쪽) 그 점이 바로 앞에 오게 돌린다. 판 가운데 점은 어느 쪽이든 보이니 돌리지 않는다
+ */
+export function focusAngle(x, z, current, keep = FRONT_DEG) {
+  if (Math.hypot(x, z) < 1e-6) return current;
+  const p = rotateY({ x, z }, current);
+  const off = (Math.atan2(p.x, p.z) * 180) / Math.PI;
+  if (Math.abs(off) <= keep) return current;
+  const a = (-Math.atan2(x, z) * 180) / Math.PI;
+  return ((a % 360) + 360) % 360;
+}
+
+/** 반직선이 높이 y 의 평면과 만나는 점. 위쪽으로 나가거나 평면과 나란하면 null */
+export function rayPlaneY(o, d, y) {
+  if (Math.abs(d.y) < 1e-9) return null;
+  const s = (y - o.y) / d.y;
+  if (s <= 0) return null;
+  return { x: o.x + d.x * s, y, z: o.z + d.z * s };
+}
+
 /** axial 이웃 여섯. i 번째 이웃은 판 위 각도 NEIGHBOR_DEG[i] 쪽이다 */
 export const NEIGHBORS = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 export const NEIGHBOR_DEG = [0, -60, -120, 180, 120, 60];

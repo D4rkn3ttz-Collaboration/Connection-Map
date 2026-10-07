@@ -119,6 +119,10 @@
     }
     .rotate output { display: inline-block; min-width: 3.2em; color: var(--ink); font-variant-numeric: tabular-nums; }
     #angle { width: 180px; accent-color: var(--accent); }
+    #fitView { font: inherit; color: var(--ink); background: #fff; border: 1px solid var(--line); border-radius: 6px;
+      padding: 4px 8px; cursor: pointer; }
+    #fitView:hover { border-color: var(--accent); color: var(--accent); }
+    #fitView:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
     @media (max-width: 640px) {
       #panel { left: 16px; right: 16px; width: auto; top: auto; bottom: 72px; max-height: 45%; }
@@ -166,6 +170,7 @@
     <label for="angle">회전</label>
     <input id="angle" type="range" min="0" max="360" step="1" value="160">
     <output id="angleOut" for="angle">160°</output>
+    <button id="fitView" type="button" title="휠 · 두 손가락 · + − 키로 다가가고 물러난다. 0 키도 같다">전체 보기</button>
   </div>
 
   <script type="module" src="./main.js"></script>

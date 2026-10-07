@@ -5,23 +5,36 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import {
+  FOCUS_ZOOM,
+  FRONT_DEG,
   GAP_RATIO,
   H_TIERS,
   LINKS_VIEW_SELECT,
+  ZOOM_MAX,
+  ZOOM_MIN,
   axialToXZ,
   blockHeights,
+  clampTarget,
+  clampZoom,
   edgeSegments,
   fitCamera,
+  focusAngle,
   linksMissing,
   linksOf,
   matchLinks,
   parseLayout,
   parseSupabaseConfig,
+  pinchZoom,
   plateBounds,
   projectPoint,
+  rayPlaneY,
+  rotateY,
   rowsToLayout,
   searchTerritories,
+  shortestTurn,
   tierOf,
+  wheelZoom,
+  zoomToward,
 } from './lib.js';
 
 // 가짜 이름만 쓴다
@@ -259,4 +272,74 @@ test('14. 카메라는 기울기 고정으로 두 판을 다 담는다 — 화�
   // 판 사이가 넓을수록 · 화면이 좁을수록 멀리서 본다
   assert.ok(fitCamera({ radius, gap: radius * 0.9, top, aspect: 1.6 }).dist < fitCamera({ radius, gap, top, aspect: 1.6 }).dist);
   assert.ok(fitCamera({ radius, gap, top, aspect: 0.5 }).dist > fitCamera({ radius, gap, top, aspect: 1.6 }).dist);
+});
+
+test('15. 확대 — 범위 안에서만, 휠 위로 · 손가락 벌리기는 다가가기, 짚은 점은 화면 제자리 (2026-10-08)', () => {
+  assert.equal(clampZoom(100), ZOOM_MAX);
+  assert.equal(clampZoom(0), ZOOM_MIN);
+  assert.equal(clampZoom(NaN), 1);
+  assert.ok(wheelZoom(1, -100) > 1 && wheelZoom(1, 100) < 1, '위로 굴리면 다가간다');
+  assert.ok(Math.abs(wheelZoom(wheelZoom(2, -120), 120) - 2) < 1e-9, '같은 만큼 되굴리면 제자리');
+  assert.equal(wheelZoom(1, -3, 1), wheelZoom(1, -48), '줄 단위는 16 픽셀');
+  assert.equal(wheelZoom(1, -1e9), wheelZoom(1, -300), '한 번에 너무 많이 가지 않는다');
+  assert.equal(wheelZoom(ZOOM_MAX, -100), ZOOM_MAX);
+  assert.equal(pinchZoom(1, 100, 200), 2);
+  assert.equal(pinchZoom(2, 0, 50), 2, '거리 0 은 무시');
+
+  // 짚은 점은 확대 전후 화면 같은 자리에 남는다 (카메라 = 바라보는 점 + 기울기 방향 × 거리)
+  const aspect = 1.6;
+  const fitDist = 200;
+  const camAt = (t, zoom) => ({ dist: fitDist / zoom, lookY: t.y, aspect });
+  const P = { x: 25, y: 3, z: -10 };
+  const T0 = { x: 0, y: 36, z: 0 };
+  const T1 = zoomToward(T0, P, 1, 2.5);
+  const shift = (t) => [P.x - t.x, P.y, P.z - t.z]; // 카메라가 x · z 로 옮겨 간 만큼 점을 반대로 옮겨 투영한다
+  const before = projectPoint(shift(T0), camAt(T0, 1));
+  const after = projectPoint(shift(T1), camAt(T1, 2.5));
+  assert.ok(Math.abs(before.x - after.x) < 1e-9 && Math.abs(before.y - after.y) < 1e-9, '짚은 점이 움직였다');
+  assert.deepEqual(zoomToward(T0, P, 2, 2), T0, '확대가 그대로면 바라보는 점도 그대로');
+});
+
+test('16. 바라보는 점은 판 안에 묶이고, 찾은 영토는 옆 · 뒤쪽일 때만 앞으로 돌린다 (2026-10-08)', () => {
+  const home = { x: 0, y: 40, z: 0 };
+  const box = { radius: 50, ylo: 0, yhi: 95 };
+  assert.deepEqual(clampTarget({ x: 30, y: 0, z: 30 }, home, { ...box, zoom: 1 }), home, '확대 1 이면 처음 자리');
+  assert.deepEqual(clampTarget({ x: 30, y: 0, z: 30 }, home, { ...box, zoom: 0.8 }), home);
+  const far = clampTarget({ x: 500, y: -50, z: 0 }, home, { ...box, zoom: 1.25 });
+  assert.ok(Math.abs(far.x - 20) < 1e-9 && far.z === 0, '확대 1.25 면 반지름의 0.4 까지');
+  assert.ok(Math.abs(far.y - 24) < 1e-9, '높이도 처음 자리에서 바닥 쪽으로 0.4 까지');
+  const edge = clampTarget({ x: 0, y: 3, z: -48 }, home, { ...box, zoom: 2 });
+  assert.deepEqual(edge, { x: 0, y: 3, z: -48 }, '확대 2 부터는 판 가장자리 · 바닥도 화면 가운데로');
+  // 판 위 점을 짚고 다가가면 묶임에 안 걸린다
+  for (const P of [{ x: 50, y: 0, z: 0 }, { x: -30, y: 95, z: 40 }]) {
+    for (const z of [1.3, 2, ZOOM_MAX]) {
+      const t = zoomToward(home, P, 1, z);
+      const c = clampTarget(t, home, { ...box, zoom: z });
+      assert.ok(Math.hypot(c.x - t.x, c.y - t.y, c.z - t.z) < 1e-9, `묶였다 ${JSON.stringify(P)} ×${z}`);
+    }
+  }
+
+  // 판 돌리기 · 앞으로 돌리기 각
+  const r = rotateY({ x: 1, z: 0 }, 90);
+  assert.ok(Math.abs(r.x) < 1e-9 && Math.abs(r.z + 1) < 1e-9, 'three.js rotation.y 와 같은 방향');
+  assert.equal(shortestTurn(350, 10), 20);
+  assert.equal(shortestTurn(10, 350), -20);
+  assert.equal(shortestTurn(0, 180), -180);
+  for (const [x, z] of [[0, -30], [30, 0], [-20, -20], [5, -40]]) {
+    for (const cur of [0, 90, 160, 300]) {
+      const a = focusAngle(x, z, cur);
+      const p = rotateY({ x, z }, a);
+      const off = Math.abs((Math.atan2(p.x, p.z) * 180) / Math.PI);
+      if (a === cur) assert.ok(off <= FRONT_DEG, `이미 앞이라 그대로 (${x},${z} @${cur})`);
+      else assert.ok(off < 1e-9 && p.z > 0 && a >= 0 && a < 360, `바로 앞으로 (${x},${z} @${cur})`);
+    }
+  }
+  assert.equal(focusAngle(0, 30, 0), 0, '앞쪽이면 그대로');
+  assert.equal(focusAngle(0, 0, 123), 123, '판 가운데면 돌리지 않는다');
+  assert.ok(FOCUS_ZOOM > 1 && FOCUS_ZOOM <= ZOOM_MAX);
+
+  // 반직선 · 평면
+  assert.deepEqual(rayPlaneY({ x: 0, y: 10, z: 0 }, { x: 1, y: -1, z: 0 }, 0), { x: 10, y: 0, z: 0 });
+  assert.equal(rayPlaneY({ x: 0, y: 10, z: 0 }, { x: 1, y: 1, z: 0 }, 0), null, '평면이 뒤쪽');
+  assert.equal(rayPlaneY({ x: 0, y: 10, z: 0 }, { x: 1, y: 0, z: 0 }, 0), null, '나란하다');
 });
