@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* 이 페이지는 3D 를 확인하는 최소 화면이다 — 닥스훈트 화면이 들어오면 그쪽 색 · 글꼴을 쓴다 */
+@theme {
+  --color-app: #eef1f7;
+  --color-ink: #1d2433;
+  --color-ink-soft: #5b6478;
+  --color-line: #e1e6ef;
+  --color-accent: #e5484d;
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--color-app);
+  color: var(--color-ink);
+}

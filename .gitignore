@@ -1,7 +1,14 @@
 # data/ 안은 로컬 시험용 자료라 넣지 않는다 — 공개 열쇠 설정 파일 하나만 넣는다 (2026-10-06 결정, README 「공개 열쇠」)
-# 비밀 열쇠 · 쓰기 열쇠는 어디에도 넣지 않는다. 시험(lib.test.mjs 13)이 설정 파일에 공개 열쇠만 있는지 본다
+# 비밀 열쇠 · 쓰기 열쇠는 어디에도 넣지 않는다. 시험(src/lib/supabase.test.mjs)이 설정 파일에 공개 열쇠만 있는지 본다
 data/*
 !data/supabase.json
+
+# 의존성 · Next.js 빌드
 node_modules/
+/.next/
+/out/
+*.tsbuildinfo
+next-env.d.ts
+
 .DS_Store
 Thumbs.db
