@@ -44,7 +44,7 @@ function LegendGroup({
         <span>{caption}</span>
       </p>
       <p className={styles.sectionLabel}>
-        섬 색 · {tone === "open" ? "영역" : "유형"}
+        {tone === "open" ? "플랫폼 유형" : "섬 색 · 유형"}
       </p>
       <ul className={styles.items}>
         {items.map((item) => (
