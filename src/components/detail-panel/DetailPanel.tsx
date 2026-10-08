@@ -85,7 +85,7 @@ export function DetailPanel(props: DetailPanelProps) {
         <header className={styles.header}>
           {subject && (
             <p className={styles.eyebrow}>
-              {subject.eyebrow} · {subject.title}
+              {subject.eyebrow}
             </p>
           )}
           <button
@@ -97,7 +97,9 @@ export function DetailPanel(props: DetailPanelProps) {
             ×
           </button>
           <h2>{subject?.title ?? "상세 정보"}</h2>
-          {subject && <p className={styles.breadcrumb}>{subject.breadcrumb}</p>}
+          {subject?.breadcrumb && (
+            <p className={styles.breadcrumb}>{subject.breadcrumb}</p>
+          )}
         </header>
         {subject ? (
           <>

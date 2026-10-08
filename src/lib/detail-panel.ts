@@ -23,7 +23,7 @@ export interface DetailSubject {
   key: string;
   title: string;
   eyebrow: string;
-  breadcrumb: string;
+  breadcrumb: string | null;
   territories: PanelTerritory[];
   lines: LinkLine[];
   updatedAt: string | null;
@@ -123,10 +123,13 @@ export function detailSubject(
   return {
     key: `${pick.web}:${pick.kind}:${pick.kind === "territory" ? pick.territory_id : pick.island_id}`,
     title,
-    eyebrow: `${WEB_LABEL[pick.web]} ${pick.kind === "territory" ? "영토" : "섬"}`,
+    eyebrow:
+      pick.kind === "territory"
+        ? `${territories[0].territory.islandName} 영토`
+        : `${WEB_LABEL[pick.web]} 섬`,
     breadcrumb:
       pick.kind === "territory"
-        ? `${territories[0].territory.islandName} > ${title}`
+        ? null
         : `${WEB_LABEL[pick.web]} · 영토 ${territories.length}개`,
     territories,
     lines: linksOf(lines, pick, layouts).lines,
