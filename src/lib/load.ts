@@ -1,7 +1,7 @@
 // 자료 받기 — 다크웹 판 · 오픈웹 판 · 연결. 화면(닥스훈트 앱)이 한 번 받아 3D 와 둘레 기능에 같이 넘긴다.
 //
 //   ?dark=<주소>    다크웹 배치 결과 파일(같은 칸 꼴). 없으면 통합 Supabase 표 public.dark_layout
-//   ?open=<주소>    오픈웹 배치 결과(같은 칸 꼴). 없으면 위 판은 빈 원판이다 — 오픈웹 판 꼴은 닥스훈트가 정한다
+//   ?open=<주소>    오픈웹 배치 결과 파일(같은 칸 꼴). 없으면 통합 Supabase 표 public.open_layout
 //   ?links=<주소>   연결 줄 목록(JSON 배열). 없으면(또는 supabase) 통합 Supabase 공개 뷰 links_public.
 //                   뷰가 없거나 공개 읽기가 안 열렸으면 연결선 없이 그리고 「연결 자료 없음」 까닭을 낸다
 //
@@ -10,7 +10,7 @@
 import cfgRaw from "../../data/supabase.json";
 import { parseLayout, type Layout } from "./layout.ts";
 import { LINKS_VIEW_SELECT, linksMissing, matchLinks, type LinkLine } from "./links.ts";
-import { DARK_TABLE_SELECT, parseSupabaseConfig, rowsToLayout, type SupabaseConfig } from "./supabase.ts";
+import { DARK_TABLE_SELECT, OPEN_TABLE_SELECT, parseSupabaseConfig, rowsToLayout, type SupabaseConfig } from "./supabase.ts";
 
 export interface SceneData {
   dark: Layout | null;
@@ -73,16 +73,20 @@ export async function loadSceneData(params: URLSearchParams): Promise<SceneData>
     out.bad.dark = true;
   }
 
-  if (src.open) {
-    try {
+  try {
+    if (src.open) {
       out.open = parseLayout(await getJson(src.open), "open");
-      out.status.open = `오픈웹(파일) · 영토 ${out.open.territories.length}${out.open.skipped ? ` · 버린 줄 ${out.open.skipped}` : ""}`;
-    } catch (e) {
-      out.status.open = `오픈웹 배치 결과를 못 읽었다 (${(e as Error).message})`;
-      out.bad.open = true;
+    } else {
+      if (!cfg) throw new Error(cfgErr);
+      const r = await getSupabase(cfg, `/rest/v1/open_layout?select=${OPEN_TABLE_SELECT}&order=territory_id.asc`);
+      if (!r.ok) throw new Error(`통합 DB 응답 ${r.status}`);
+      out.open = parseLayout(rowsToLayout(await r.json(), "open"), "open");
     }
-  } else {
-    out.status.open = "오픈웹 배치 결과 없음 — 닥스훈트 오픈웹 판 꼴이 정해지면 읽는다(지금은 ?open= 파일로만)";
+    const o = out.open;
+    out.status.open = `오픈웹(${src.open ? "파일" : "통합 DB"}) ${o.quarter?.replace("-", " ") ?? ""} · 영토 ${o.territories.length} · 자료 ${when(o.asOf)}${o.skipped ? ` · 버린 줄 ${o.skipped}` : ""}`;
+  } catch (e) {
+    out.status.open = `오픈웹 배치 결과를 못 읽었다 (${(e as Error).message})`;
+    out.bad.open = true;
   }
 
   try {
