@@ -87,7 +87,7 @@
 .shell[data-collapsed="true"] .collapse {
   left: auto;
   right: 12px;
-  top: 72px;
+  top: 132px;
   gap: 4px;
   width: max-content;
   height: 30px;
@@ -458,6 +458,6 @@
     box-shadow: none;
   }
   .panel {
-    border-radius: 0 14px 14px 0;
+    border-radius: 14px 0 0 14px;
   }
 }

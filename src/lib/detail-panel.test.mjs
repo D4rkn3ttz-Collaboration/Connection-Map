@@ -6,6 +6,7 @@ import {
   confidenceLabel,
   dateParts,
   detailSubject,
+  incidentsInRange,
   incidentGroups,
   publicIncidents,
   relationLabel,
@@ -204,6 +205,22 @@ test("사건은 최신순·한국 시간 월별로 정렬하고 날짜 미등록
   assert.equal(sortIncidents(list).at(-1).id, "unknown");
   assert.equal(list[0], unknown, "입력 배열은 바꾸지 않는다");
   assert.equal(incidentGroups(list).at(-1).month, "날짜 미등록");
+});
+
+test("사건 기간 필터는 한국 시간 날짜의 시작과 끝을 포함한다", () => {
+  const incidents = [
+    { id: "before", observedAt: "2026-09-30T14:59:59Z" },
+    { id: "start", observedAt: "2026-09-30T15:00:00Z" },
+    { id: "end", observedAt: "2026-10-01T14:59:59Z" },
+    { id: "after", observedAt: "2026-10-01T15:00:00Z" },
+    { id: "missing", observedAt: null },
+  ];
+  assert.deepEqual(
+    incidentsInRange(incidents, "2026-10-01", "2026-10-01").map((item) => item.id),
+    ["start", "end"],
+  );
+  assert.equal(incidentsInRange(incidents, null, null).length, 5);
+  assert.deepEqual(incidentsInRange(incidents, "2026-10-02", "2026-10-01"), []);
 });
 
 test("검증 상태가 없거나 새로운 유형이면 검증 완료로 추정하지 않는다", () => {

@@ -15,6 +15,7 @@ import { DetailTabs } from "./DetailTabs";
 import { OverviewTab } from "./OverviewTab";
 import { EventsTab } from "./EventsTab";
 import { ConnectionsTab } from "./ConnectionsTab";
+import { DetailEmptyState } from "./DetailEmptyState";
 import styles from "./detail-panel.module.css";
 
 export interface DetailPanelProps {
@@ -56,7 +57,6 @@ export function DetailPanel(props: DetailPanelProps) {
       ),
     );
   }, [subject, props.incidents]);
-  if (!subject) return null;
   return (
     <div className={styles.shell} data-collapsed={props.collapsed}>
       <button
@@ -81,12 +81,14 @@ export function DetailPanel(props: DetailPanelProps) {
         className={styles.panel}
         id={`${id}-detail`}
         hidden={props.collapsed}
-        aria-label={`${subject.title} 상세 패널`}
+        aria-label={subject ? `${subject.title} 상세 패널` : "상세 패널"}
       >
         <header className={styles.header}>
-          <p className={styles.eyebrow}>
-            {subject.eyebrow} · {subject.title}
-          </p>
+          {subject && (
+            <p className={styles.eyebrow}>
+              {subject.eyebrow} · {subject.title}
+            </p>
+          )}
           <button
             type="button"
             className={styles.close}
@@ -95,58 +97,69 @@ export function DetailPanel(props: DetailPanelProps) {
           >
             ×
           </button>
-          <h2>{subject.title}</h2>
-          <p className={styles.breadcrumb}>{subject.breadcrumb}</p>
+          <h2>{subject?.title ?? "상세 정보"}</h2>
+          {subject && <p className={styles.breadcrumb}>{subject.breadcrumb}</p>}
         </header>
-        <DetailTabs
-          id={id}
-          active={props.tab}
-          eventCount={incidents.length}
-          connectionCount={subject.lines.length}
-          onSelect={props.onTab}
-        />
-        <div
-          key={`${subject.key}:${props.tab}`}
-          className={styles.content}
-          role="tabpanel"
-          id={`${id}-${props.tab}-panel`}
-          aria-labelledby={`${id}-${props.tab}`}
-          tabIndex={0}
-        >
-          {props.tab === "overview" && (
-            <OverviewTab
-              subject={subject}
+        {subject ? (
+          <>
+            <DetailTabs
+              id={id}
+              active={props.tab}
               eventCount={incidents.length}
-              onTab={props.onTab}
-              onShowTerritory={props.onShowTerritory}
+              connectionCount={subject.lines.length}
+              onSelect={props.onTab}
             />
-          )}
-          {props.tab === "events" && (
-            <EventsTab
-              name={subject.title}
-              incidents={incidents}
-              selectedId={props.selectedIncidentId}
-              unavailable={
-                !props.incidents && Boolean(props.connectionsUnavailable)
-              }
-              onSelect={props.onSelectIncident}
-              onSelectLink={props.onSelectLink}
+            <div
+              key={`${subject.key}:${props.tab}`}
+              className={styles.content}
+              role="tabpanel"
+              id={`${id}-${props.tab}-panel`}
+              aria-labelledby={`${id}-${props.tab}`}
+              tabIndex={0}
+            >
+              {props.tab === "overview" && (
+                <OverviewTab
+                  subject={subject}
+                  eventCount={incidents.length}
+                  onTab={props.onTab}
+                  onShowTerritory={props.onShowTerritory}
+                />
+              )}
+              {props.tab === "events" && (
+                <EventsTab
+                  name={subject.title}
+                  incidents={incidents}
+                  selectedId={props.selectedIncidentId}
+                  unavailable={
+                    !props.incidents && Boolean(props.connectionsUnavailable)
+                  }
+                  onSelect={props.onSelectIncident}
+                  onSelectLink={props.onSelectLink}
+                />
+              )}
+              {props.tab === "connections" && (
+                <ConnectionsTab
+                  lines={subject.lines}
+                  layouts={props.layouts}
+                  selectedId={
+                    props.selected?.kind === "link" ? props.selected.link_id : null
+                  }
+                  unavailable={Boolean(props.connectionsUnavailable)}
+                  onSelect={props.onSelectLink}
+                  onBack={props.onBack}
+                  onShowTerritory={props.onShowTerritory}
+                />
+              )}
+            </div>
+          </>
+        ) : (
+          <div className={styles.content}>
+            <DetailEmptyState
+              title="선택한 영토가 없습니다."
+              description="지도에서 영토를 선택하거나 위쪽 검색창에서 찾아보세요."
             />
-          )}
-          {props.tab === "connections" && (
-            <ConnectionsTab
-              lines={subject.lines}
-              layouts={props.layouts}
-              selectedId={
-                props.selected?.kind === "link" ? props.selected.link_id : null
-              }
-              unavailable={Boolean(props.connectionsUnavailable)}
-              onSelect={props.onSelectLink}
-              onBack={props.onBack}
-              onShowTerritory={props.onShowTerritory}
-            />
-          )}
-        </div>
+          </div>
+        )}
       </aside>
     </div>
   );

@@ -186,6 +186,23 @@ export function sortIncidents(incidents: readonly PanelIncident[]) {
   );
 }
 
+/** 한국 시간의 시작일·종료일(양 끝 포함) 안에 관측된 사건만 남긴다. */
+export function incidentsInRange(
+  incidents: readonly PanelIncident[],
+  from: string | null,
+  to: string | null,
+) {
+  if (!from || !to) return [...incidents];
+  const start = Date.parse(`${from}T00:00:00+09:00`);
+  const end = Date.parse(`${to}T00:00:00+09:00`) + 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end)
+    return [];
+  return incidents.filter((incident) => {
+    const observed = Date.parse(incident.observedAt ?? "");
+    return Number.isFinite(observed) && observed >= start && observed < end;
+  });
+}
+
 export function dateParts(value: string | null | undefined) {
   if (!value || !Number.isFinite(Date.parse(value))) return null;
   const parts = new Intl.DateTimeFormat("en-GB", {

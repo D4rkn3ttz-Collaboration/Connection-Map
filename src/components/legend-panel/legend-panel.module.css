@@ -1,0 +1,180 @@
+.panel {
+  flex: 0 0 196px;
+  width: 196px;
+  min-width: 0;
+  height: 100%;
+  padding: 17px 14px 22px;
+  overflow-y: auto;
+  border-right: 1px solid #e7ebf1;
+  background: #fff;
+  color: #293240;
+  scrollbar-width: thin;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.group {
+  margin-top: 17px;
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  color: #586378;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.openBadge,
+.darkBadge {
+  display: inline-block;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+}
+
+.openBadge {
+  background: #e9efff;
+  color: #2868eb;
+}
+
+.darkBadge {
+  background: #ffe9eb;
+  color: #e5484d;
+}
+
+.sectionLabel,
+.guide h3 {
+  margin: 0 0 7px;
+  color: #8893a5;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.items,
+.lineItems {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.items li,
+.lineItems li {
+  display: flex;
+  min-height: 21px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.hex {
+  display: inline-block;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 13px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  border: 1px solid #8894a5;
+}
+
+.guide {
+  margin-top: 18px;
+}
+
+.lineItems li {
+  gap: 7px;
+}
+
+.solidLine,
+.dashedLine,
+.dottedLine {
+  display: inline-block;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 0;
+  border-top: 1.5px solid #708098;
+}
+
+.dashedLine {
+  border-top-style: dashed;
+}
+
+.dottedLine {
+  border-top-style: dotted;
+}
+
+.guide p {
+  margin: 0 0 5px;
+  color: #8994a4;
+  font-size: 10px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.mobileToggle,
+.mobileClose {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .panel {
+    position: absolute;
+    z-index: 18;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    display: none;
+    width: min(220px, calc(100% - 48px));
+    height: auto;
+    box-shadow: 8px 0 24px #1d355b1a;
+  }
+
+  .panel[data-open="true"] {
+    display: block;
+  }
+
+  .mobileToggle {
+    position: absolute;
+    z-index: 8;
+    top: 75px;
+    left: 25px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    padding: 0 10px;
+    border: 1px solid #dce3ed;
+    border-radius: 6px;
+    background: #fff;
+    color: #39485c;
+    font-size: 11px;
+    box-shadow: 0 2px 5px #1834590c;
+  }
+
+  .mobileClose {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    background: transparent;
+    color: #78869b;
+    font-size: 21px;
+  }
+}
