@@ -2,20 +2,8 @@
 
 import { useState } from "react";
 import type { Layout } from "@/lib/layout.ts";
+import { openLegendItems, type LegendItem } from "@/lib/legend.ts";
 import styles from "./legend-panel.module.css";
-
-type LegendItem = { name: string; color: string };
-
-const OPEN_LEGEND: LegendItem[] = [
-  { name: "코드 저장소", color: "#2868EB" },
-  { name: "텍스트 호스팅", color: "#10A99F" },
-  { name: "커뮤니티", color: "#F27927" },
-  { name: "클라우드 스토리지", color: "#28AEE6" },
-  { name: "파일 공유", color: "#8555EE" },
-  { name: "백엔드 서비스", color: "#26BA58" },
-  { name: "리서치 소스", color: "#E3B90B" },
-  { name: "기타", color: "#C9D2DF" },
-];
 
 const DARK_LEGEND: LegendItem[] = [
   { name: "포럼", color: "#877BF3" },
@@ -56,7 +44,7 @@ function LegendGroup({
         <span>{caption}</span>
       </p>
       <p className={styles.sectionLabel}>
-        섬 색 · {tone === "open" ? "영역" : "유형"}
+        {tone === "open" ? "플랫폼 유형" : "섬 색 · 유형"}
       </p>
       <ul className={styles.items}>
         {items.map((item) => (
@@ -116,7 +104,7 @@ export function LegendPanel({
           badge="OPEN WEB"
           caption="오픈웹 · 표층"
           tone="open"
-          items={itemsFor(openLayout, OPEN_LEGEND)}
+          items={openLegendItems(openLayout)}
         />
         <LegendGroup
           badge="DARK WEB"

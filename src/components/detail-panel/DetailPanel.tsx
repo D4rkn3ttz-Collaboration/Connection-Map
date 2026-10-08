@@ -69,13 +69,12 @@ export function DetailPanel(props: DetailPanelProps) {
       >
         <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
           <path
-            d={props.collapsed ? "m7 3-3 3 3 3" : "m5 3 3 3-3 3"}
+            d={props.collapsed ? "m5 3 3 3-3 3" : "m7 3-3 3 3 3"}
             fill="none"
             stroke="currentColor"
             strokeWidth="1.4"
           />
         </svg>
-        {props.collapsed && <span>상세 보기</span>}
       </button>
       <aside
         className={styles.panel}
