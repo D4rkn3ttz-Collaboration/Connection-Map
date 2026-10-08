@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import LinkScene3D, { type LinkScene3DHandle, type TerritoryRef } from "@/components/LinkScene3D";
 import TopBar from "@/components/TopBar";
 import { DetailPanel } from "@/components/detail-panel/DetailPanel";
+import { LegendPanel } from "@/components/legend-panel/LegendPanel";
 import { useDetailPanel } from "@/hooks/useDetailPanel";
 import { searchTerritories, type Layout } from "@/lib/layout.ts";
 import { focusOf } from "@/lib/links.ts";
@@ -66,14 +67,16 @@ export default function Demo() {
     <main className="flex h-full flex-col bg-app">
       <TopBar query={query} onQueryChange={setQuery} hits={hits} onChoose={choose} />
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 p-4 sm:p-6">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-lg font-bold">연결 생태계</h2>
-          <p className="text-sm text-ink-soft">오픈웹 · 다크웹 플랫폼과 연결 정보</p>
-        </div>
+      <div className="relative flex min-h-0 flex-1">
+        <LegendPanel openLayout={layouts.open} darkLayout={layouts.dark} />
 
-        <div className="relative flex min-h-[420px] flex-1 rounded-2xl border border-line bg-white">
-          <div className="relative min-w-0 flex-1 overflow-hidden rounded-2xl">
+        <section className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:p-5" aria-label="연결 생태계 지도">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="text-lg font-bold">연결 생태계</h2>
+            <p className="text-sm text-ink-soft">오픈웹 · 다크웹 플랫폼과 연결 정보</p>
+          </div>
+
+          <div className="relative min-h-[420px] flex-1 overflow-hidden rounded-2xl border border-line bg-white">
             <LinkScene3D
               ref={scene}
               className="absolute inset-0"
@@ -104,36 +107,37 @@ export default function Demo() {
               <output className="w-9 text-right font-medium tabular-nums text-accent">{angle}°</output>
             </label>
           </div>
-          <DetailPanel
-            subject={panel.subject}
-            selected={selected}
-            layouts={layouts}
-            lines={lines}
-            tab={panel.tab}
-            collapsed={panel.collapsed}
-            selectedIncidentId={panel.incident?.id ?? null}
-            connectionsUnavailable={data?.bad.links}
-            onTab={panel.selectTab}
-            onCollapse={panel.toggleCollapsed}
-            onClose={panel.close}
-            onSelectIncident={panel.selectIncident}
-            onSelectLink={panel.selectLink}
-            onBack={panel.clearLink}
-            onShowTerritory={choose}
-          />
-        </div>
 
-        <ul className="space-y-0.5 text-xs text-ink-soft">
-          {data ? (
-            (["dark", "open", "links"] as const).map((k) => (
-              <li key={k} className={data.bad[k] ? "text-accent" : undefined}>
-                {data.status[k]}
-              </li>
-            ))
-          ) : (
-            <li>다크웹 배치 결과를 받는 중</li>
-          )}
-        </ul>
+          <ul className="space-y-0.5 text-xs text-ink-soft">
+            {data ? (
+              (["dark", "open", "links"] as const).map((k) => (
+                <li key={k} className={data.bad[k] ? "text-accent" : undefined}>
+                  {data.status[k]}
+                </li>
+              ))
+            ) : (
+              <li>다크웹 배치 결과를 받는 중</li>
+            )}
+          </ul>
+        </section>
+
+        <DetailPanel
+          subject={panel.subject}
+          selected={selected}
+          layouts={layouts}
+          lines={lines}
+          tab={panel.tab}
+          collapsed={panel.collapsed}
+          selectedIncidentId={panel.incident?.id ?? null}
+          connectionsUnavailable={data?.bad.links}
+          onTab={panel.selectTab}
+          onCollapse={panel.toggleCollapsed}
+          onClose={panel.close}
+          onSelectIncident={panel.selectIncident}
+          onSelectLink={panel.selectLink}
+          onBack={panel.clearLink}
+          onShowTerritory={choose}
+        />
       </div>
     </main>
   );

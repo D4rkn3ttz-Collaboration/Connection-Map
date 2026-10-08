@@ -15,7 +15,7 @@ const initial: PanelState = {
   selected: null,
   subject: null,
   tab: "overview",
-  collapsed: false,
+  collapsed: true,
   incident: null,
 };
 
@@ -28,6 +28,7 @@ export function useDetailPanel() {
       selected: pick,
       subject: pick,
       tab: pick?.kind === "link" ? "connections" : "overview",
+      collapsed: pick === null,
     });
   const selectTab = (tab: DetailTab) =>
     setState((current) => ({
