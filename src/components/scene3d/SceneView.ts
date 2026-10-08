@@ -446,7 +446,15 @@ export class SceneView {
       const geo = new LineGeometry();
       geo.setPositions(pts.flatMap((p) => [p.x, p.y, p.z]));
       const st = lineStyle(l.confidence);
-      const mat = new LineMaterial({ color: LINK_COLOR, linewidth: 2.5, dashed: st.dashed, dashSize: st.dash, gapSize: st.gap });
+      const mat = new LineMaterial({
+        color: LINK_COLOR,
+        linewidth: st.faint ? 1.2 : 2.5,
+        dashed: st.dashed,
+        dashSize: st.dash,
+        gapSize: st.gap,
+        transparent: st.faint,
+        opacity: st.faint ? 0.45 : 1,
+      });
       mat.resolution.set(w, h);
       const line = new Line2(geo, mat);
       line.computeLineDistances();

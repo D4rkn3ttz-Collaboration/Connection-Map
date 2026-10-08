@@ -127,11 +127,13 @@ export function linksOf(lines: LinkLine[], pick: Pick | null, layouts: { dark: L
  * 연결선 꼴 — 신뢰도대로(Figma 범례 「연결선 · 신뢰도」): 높음 실선 · 중간 파선 · 낮음 점선.
  * 모르는 값은 실선(선을 숨기지 않는다). dash · gap 은 판 단위(칸 반지름 1)다
  */
-export function lineStyle(confidence: string): { dashed: boolean; dash: number; gap: number } {
+export function lineStyle(confidence: string): { dashed: boolean; dash: number; gap: number; faint: boolean } {
   const c = fold(confidence);
-  if (["중", "중간", "medium", "mid"].includes(c)) return { dashed: true, dash: 1.6, gap: 1 };
-  if (["하", "낮음", "low"].includes(c)) return { dashed: true, dash: 0.35, gap: 0.8 };
-  return { dashed: false, dash: 0, gap: 0 };
+  if (["상", "높음", "high"].includes(c)) return { dashed: false, dash: 0, gap: 0, faint: false };
+  if (["중", "중간", "medium", "mid"].includes(c)) return { dashed: true, dash: 1.6, gap: 1, faint: false };
+  if (["하", "낮음", "low"].includes(c)) return { dashed: true, dash: 0.35, gap: 0.8, faint: false };
+  // 신뢰도가 비었거나 모르는 값 — 선은 숨기지 않되 옅고 가늘게 그려 「높음」 실선과 헷갈리지 않게 한다(2026-10-08)
+  return { dashed: false, dash: 0, gap: 0, faint: true };
 }
 
 /**
