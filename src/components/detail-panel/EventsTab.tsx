@@ -148,11 +148,11 @@ export function EventsTab({
           </label>
         </div>
       )}
-      <p className={styles.note}>공개 연결 기록 · 한국 시간</p>
+      <p className={styles.note}>오픈웹 사건 및 공개 연결 기록 · 한국 시간</p>
       {!incidents.length ? (
         <DetailEmptyState
           title="표시할 사건 기록이 없습니다."
-          description="현재 공개 연결 정보에 이 영토의 사건이 등록되어 있지 않습니다."
+          description="이 영토에 등록된 사건이 없습니다."
         />
       ) : !visible.length ? (
         <DetailEmptyState
@@ -185,6 +185,9 @@ export function EventsTab({
                               {tag}
                             </span>
                           ))}
+                          {incident.status && (
+                            <span className={timeline.tag}>{incident.status}</span>
+                          )}
                         </span>
                         <strong>
                           {incident.title
@@ -192,8 +195,9 @@ export function EventsTab({
                             : incident.reference}
                         </strong>
                         <span className={timeline.caption}>
-                          {incident.territoryName} · 연결{" "}
-                          {incident.linkIds.length}건
+                          {incident.territoryName}
+                          {incident.linkIds.length > 0 &&
+                            ` · 연결 ${incident.linkIds.length}건`}
                         </span>
                       </button>
                     </li>
@@ -218,6 +222,7 @@ export function EventsTab({
             >
               <h3>{selected.reference}</h3>
               {selected.description && <p>{selected.description}</p>}
+              {selected.status && <p>상태: {selected.status}</p>}
               {!selected.title && (
                 <p>공개 정보에는 사건 제목과 설명이 포함되어 있지 않습니다.</p>
               )}

@@ -3,8 +3,7 @@
 import { useId, useMemo } from "react";
 import {
   detailSubject,
-  publicIncidents,
-  sortIncidents,
+  subjectIncidents,
   type DetailTab,
   type Layouts,
   type PanelIncident,
@@ -27,7 +26,8 @@ export interface DetailPanelProps {
   collapsed: boolean;
   selectedIncidentId: string | null;
   connectionsUnavailable?: boolean;
-  /** 사건 API에서 받은 목록을 넘길 수 있다. 생략하면 공개 연결의 사건 ID·관측일만 쓴다. */
+  incidentsUnavailable?: boolean;
+  /** Supabase 오픈웹 사건. 다크웹 연결 기록의 사건 ID와 합쳐 표시한다. */
   incidents?: PanelIncident[];
   onTab: (tab: DetailTab) => void;
   onCollapse: () => void;
@@ -46,16 +46,7 @@ export function DetailPanel(props: DetailPanelProps) {
   );
   const incidents = useMemo(() => {
     if (!subject) return [];
-    if (!props.incidents) return publicIncidents(subject);
-    return sortIncidents(
-      props.incidents.filter((incident) =>
-        subject.territories.some(
-          (item) =>
-            item.web === incident.territory.web &&
-            item.territory_id === incident.territory.territory_id,
-        ),
-      ),
-    );
+    return subjectIncidents(subject, props.incidents);
   }, [subject, props.incidents]);
   return (
     <div className={styles.shell} data-collapsed={props.collapsed}>
@@ -132,7 +123,10 @@ export function DetailPanel(props: DetailPanelProps) {
                   incidents={incidents}
                   selectedId={props.selectedIncidentId}
                   unavailable={
-                    !props.incidents && Boolean(props.connectionsUnavailable)
+                    incidents.length === 0 &&
+                    ((subject.territories.some((item) => item.web === "open") &&
+                      Boolean(props.incidentsUnavailable)) ||
+                      (!props.incidents && Boolean(props.connectionsUnavailable)))
                   }
                   onSelect={props.onSelectIncident}
                   onSelectLink={props.onSelectLink}

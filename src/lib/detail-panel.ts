@@ -15,6 +15,7 @@ export interface PanelIncident {
   territory: TerritoryRef;
   territoryName: string;
   exposureTypes: string[];
+  status?: string;
   description?: string;
   linkIds: string[];
 }
@@ -175,6 +176,29 @@ export function publicIncidents(subject: DetailSubject): PanelIncident[] {
         linkIds: [line.id],
       });
     }
+  }
+  return sortIncidents([...records.values()]);
+}
+
+/** 연결 기록의 사건 ID를 유지하면서 오픈웹 원본 사건의 제목·유형을 채운다. */
+export function subjectIncidents(
+  subject: DetailSubject,
+  openIncidents: readonly PanelIncident[] = [],
+): PanelIncident[] {
+  const records = new Map(publicIncidents(subject).map((incident) => [incident.id, incident]));
+  const territoryKeys = new Set(
+    subject.territories.map((item) => `${item.web}:${item.territory_id}`),
+  );
+  for (const incident of openIncidents) {
+    if (!territoryKeys.has(`${incident.territory.web}:${incident.territory.territory_id}`))
+      continue;
+    const existing = records.get(incident.id);
+    records.set(
+      incident.id,
+      existing
+        ? { ...incident, linkIds: [...new Set([...existing.linkIds, ...incident.linkIds])] }
+        : incident,
+    );
   }
   return sortIncidents([...records.values()]);
 }
