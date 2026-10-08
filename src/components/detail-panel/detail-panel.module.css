@@ -86,14 +86,15 @@
 }
 .shell[data-collapsed="true"] .collapse {
   left: auto;
-  right: 12px;
+  right: 8px;
   top: 132px;
-  gap: 4px;
-  width: max-content;
-  height: 30px;
-  padding: 0 9px;
-  border-radius: 5px;
-  font-size: 11px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: #d6e5f7;
+  border-radius: 50%;
+  color: #6f8aaf;
+  box-shadow: 0 2px 8px #4778a026;
 }
 .tabs {
   display: flex;
