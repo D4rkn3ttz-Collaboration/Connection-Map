@@ -5,7 +5,7 @@
 import { fold, text, type Layout, type Territory, type Web } from "./layout.ts";
 
 /** 연결 공개 뷰에서 받는 칸. 뷰 칸 가운데 선을 긋는 데 쓰는 것만 */
-export const LINKS_VIEW_SELECT = "link_id,rel_type,confidence,dark_territory,open_territory";
+export const LINKS_VIEW_SELECT = "link_id,rel_type,confidence,dark_territory,open_territory,verify_status,direction,match_scope,dark_observed_at,open_observed_at,event_id,finding_id";
 
 export interface LinkLine {
   id: string;
@@ -13,6 +13,13 @@ export interface LinkLine {
   openId: string;
   relType: string;
   confidence: string;
+  verification?: string;
+  direction?: string;
+  matchScope?: string;
+  darkObservedAt?: string;
+  openObservedAt?: string;
+  eventId?: string;
+  findingId?: string;
 }
 
 function finder(layout: Layout | null | undefined) {
@@ -47,6 +54,13 @@ export function matchLinks(rows: unknown, dark: Layout | null | undefined, open:
       openId: o.id,
       relType: text(row.rel_type, 32) ?? "",
       confidence: text(row.confidence, 4) ?? "",
+      verification: text(row.verify_status, 40) ?? undefined,
+      direction: text(row.direction, 40) ?? undefined,
+      matchScope: text(row.match_scope, 80) ?? undefined,
+      darkObservedAt: text(row.dark_observed_at, 40) ?? undefined,
+      openObservedAt: text(row.open_observed_at, 40) ?? undefined,
+      eventId: text(row.event_id, 80) ?? undefined,
+      findingId: text(row.finding_id, 80) ?? undefined,
     });
   }
   return { lines, unmatched };

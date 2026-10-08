@@ -71,8 +71,17 @@ type Pick =
 - `show()` 만 「부르는」 손잡이인 까닭: 같은 영토를 두 번 찾으면 두 번 다 그쪽으로 가야 한다. 값은 같아 안 바뀌므로 부르기로 둔다
 - 확대는 3D 안 일이라 손잡이를 열지 않고, **휠 · 두 손가락으로만** 한다(Figma 에 확대 단추가 없다). 끌어서 돈 각은 `onAngleChange` 로 알린다
 - 패널 「연결」 탭의 이어진 반대쪽 영토 목록은 3D 에서 받지 않고 `src/lib/links.ts` 의 `linksOf(lines, selected, layouts)` 로 같은 답을 얻는다
-- 패널 「사건」 탭 자료는 배치 결과에 없다. 사건 고르기(Figma ③-2 「발견 · 재업로드 위치 표시」)는 위치 자료가 정해지면 `Pick` 에 더한다
-- `src/app/page.tsx` · `src/components/Demo.tsx` 는 손잡이를 시험하려고 둔 최소 화면이다(찾기 칸 · 토글 · 안내 알약 · 슬라이더를 Figma 자리에만 놓았다). 닥스훈트 화면으로 바꾼다
+- 패널 「사건」 탭은 공개 연결의 사건 ID와 관측 시각을 보여 준다. 전체 사건 DB는 아직 연결되지 않았고, 공개되지 않은 제목·설명은 임의로 채우지 않는다
+- `src/components/Demo.tsx` 는 `TopBar` 의 검색, 3D 선택, 오른쪽 상세 패널을 같은 상태로 연결한다
+
+## 상세 패널
+
+영토를 고르면 오른쪽에 `개요 · 사건 · 연결` 탭이 열린다. 패널을 접거나 닫을 수 있고, 사건이나 연결을 고르면 3D 장면의 선택 상태에도 반영된다. 공개 연결 기록이 없으면 빈 상태를 표시한다.
+
+- 화면: `src/components/detail-panel/` (탭별 컴포넌트와 CSS Modules)
+- 선택 상태: `src/hooks/useDetailPanel.ts`
+- 사건 정렬·연결 데이터 가공: `src/lib/detail-panel.ts`, `src/lib/links.ts`
+- 실제 사건 API가 생기면 `DetailPanel` 의 `incidents` 속성으로 목록을 넘길 수 있다
 
 ## 무엇을 그리나 (Figma ③-0 ~ ③-3)
 
@@ -120,7 +129,7 @@ type Pick =
 | `src/lib/links.ts` | 연결 줄 맞추기(`matchLinks`) · 고른 것 → 지킬 영토와 그릴 선(`focusOf`) · 선 꼴 · 공개 뷰 「자료 없음」 가르기 |
 | `src/lib/scene.ts` | 층 높이 · 카메라 맞춤 · 확대 · 바라보는 점 묶기 · 앞으로 돌리는 각 |
 | `src/lib/supabase.ts` · `load.ts` | 통합 Supabase 받는 칸 · 표 줄 → 배치 결과 · 설정 파일 · 자료 받기 |
-| `src/lib/*.test.mjs` | 시험 17개(시제품 시험 13개 + 카메라 · 확대 · 찾은 영토 돌리기 · 고르기. 시험 4 는 층 기준으로 고쳤다) |
+| `src/lib/*.test.mjs` | 계산·선택·상세 패널 시험 25개 |
 | `src/components/scene3d/SceneView.ts` | three.js 장면 — 그리기 · 움직이기 · 누르기만 |
 | `src/components/LinkScene3D.tsx` | 장면을 감싼 React 컴포넌트(손잡이) |
 | `.github/workflows/pages.yml` | PR 에서 시험 · lint · 빌드, main 에서는 Pages 배포까지 |
