@@ -53,11 +53,18 @@ test("상세 패널은 영토·섬·연결 선택을 같은 데이터로 해석�
     lines,
   );
   assert.equal(territory.title, "PasteSite");
-  assert.equal(territory.breadcrumb, "텍스트 호스팅 > PasteSite");
+  assert.equal(territory.eyebrow, "텍스트 호스팅 영토");
+  assert.equal(territory.breadcrumb, null);
   assert.deepEqual(
     territory.lines.map((line) => line.id),
     ["LNK-1"],
   );
+  const darkTerritory = detailSubject(
+    { kind: "territory", web: "dark", territory_id: "forum-a" },
+    layouts,
+    lines,
+  );
+  assert.equal(darkTerritory.eyebrow, "포럼 영토");
   const island = detailSubject(
     { kind: "island", web: "dark", island_id: "FORUM" },
     layouts,

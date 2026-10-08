@@ -18,7 +18,6 @@ export function OverviewTab({
   onTab: (tab: DetailTab) => void;
   onShowTerritory: (territory: TerritoryRef) => void;
 }) {
-  const first = subject.territories[0];
   return (
     <div className={styles.overview}>
       <h3 className={styles.sectionHeading}>영토 정보</h3>
@@ -43,12 +42,6 @@ export function OverviewTab({
             ].join(" · ")}
           </dd>
         </div>
-        {subject.territories.length === 1 && first.territory.kind && (
-          <div>
-            <dt>영토 유형</dt>
-            <dd>{first.territory.kind}</dd>
-          </div>
-        )}
         {subject.updatedAt && (
           <div>
             <dt>자료 기준</dt>
