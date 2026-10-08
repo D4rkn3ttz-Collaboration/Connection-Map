@@ -86,7 +86,11 @@ export default function LinkScene3D(props: LinkScene3DProps) {
     if (canvas.parentElement) ro?.observe(canvas.parentElement);
     window.addEventListener("resize", onResize);
     const onKey = (ev: KeyboardEvent) => {
-      if (ev.key === "Escape" && latest.current.selected) latest.current.onSelect(null);
+      if (ev.key !== "Escape" || ev.defaultPrevented || !latest.current.selected) return;
+      // 입력 칸(검색 · 날짜 등)에서 누른 Esc 는 그 칸 몫이다 — 목록을 닫으려다 고르기 · 패널까지 풀리지 않게
+      const target = ev.target instanceof Element ? ev.target : null;
+      if (target?.closest("input, textarea, select, [contenteditable]")) return;
+      latest.current.onSelect(null);
     };
     window.addEventListener("keydown", onKey);
     return () => {

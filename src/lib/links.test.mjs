@@ -104,4 +104,8 @@ test('17. 고른 것 → 높이를 지킬 영토 · 그릴 선 — 영토 · 섬
   assert.ok(lineStyle('낮음').dashed);
   assert.equal(lineStyle('').dashed, false);
   assert.equal(lineStyle('???').dashed, false);
+  // 빈 신뢰도 · 모르는 값은 옅은 선 — 「높음」 실선과 구분된다(2026-10-08)
+  assert.equal(lineStyle('').faint, true);
+  assert.equal(lineStyle('???').faint, true);
+  for (const c of ['상', '높음', '중', '하', '낮음']) assert.equal(lineStyle(c).faint, false, c);
 });
