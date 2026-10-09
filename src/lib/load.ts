@@ -11,9 +11,10 @@
 import cfgRaw from "../../data/supabase.json";
 import { parseLayout, type Layout } from "./layout.ts";
 import { LINKS_VIEW_SELECT, linksMissing, matchLinks, type LinkLine } from "./links.ts";
+import { parseDarkIncidents } from "./dark-incidents.ts";
 import { parseOpenIncidents } from "./open-incidents.ts";
 import type { PanelIncident } from "./detail-panel.ts";
-import { DARK_TABLE_SELECT, OPEN_INCIDENT_SELECT, OPEN_INCIDENT_TYPES_SELECT, OPEN_TABLE_SELECT, parseSupabaseConfig, rowsToLayout, type SupabaseConfig } from "./supabase.ts";
+import { DARK_EVENTS_SELECT, DARK_TABLE_SELECT, OPEN_INCIDENT_SELECT, OPEN_INCIDENT_TYPES_SELECT, OPEN_TABLE_SELECT, parseSupabaseConfig, rowsToLayout, type SupabaseConfig } from "./supabase.ts";
 
 export interface SceneData {
   dark: Layout | null;
@@ -37,11 +38,11 @@ async function getSupabase(cfg: SupabaseConfig, path: string): Promise<Response>
   return fetch(cfg.url + path, { cache: "no-store", headers: { apikey: cfg.key, Accept: "application/json" } });
 }
 
-async function getTableRows(cfg: SupabaseConfig, table: string, columns: string): Promise<unknown[]> {
+async function getTableRows(cfg: SupabaseConfig, table: string, columns: string, order = "id"): Promise<unknown[]> {
   const rows: unknown[] = [];
   const pageSize = 500;
   while (true) {
-    const r = await getSupabase(cfg, `/rest/v1/${table}?select=${columns}&order=id.asc&limit=${pageSize}&offset=${rows.length}`);
+    const r = await getSupabase(cfg, `/rest/v1/${table}?select=${columns}&order=${order}.asc&limit=${pageSize}&offset=${rows.length}`);
     if (!r.ok) throw new Error(`${table} 조회 실패 (HTTP ${r.status})`);
     const page: unknown = await r.json();
     if (!Array.isArray(page)) throw new Error(`${table} 응답이 목록이 아닙니다`);
@@ -122,6 +123,18 @@ export async function loadSceneData(params: URLSearchParams): Promise<SceneData>
     }
   } else {
     out.status.incidents = "오픈웹 영토를 읽지 못해 사건을 표시할 수 없다";
+  }
+
+  // 다크웹 사건 — 다크웹 지도가 구운 사건(public.dark_events, 2026-10-09). 표가 아직 없으면 오류가 아니라 「아직 없음」
+  if (out.dark && cfg) {
+    try {
+      const dark = parseDarkIncidents(await getTableRows(cfg, "dark_events", DARK_EVENTS_SELECT, "event_id"), out.dark);
+      out.incidents = [...out.incidents, ...dark];
+      out.status.incidents += ` · 다크웹 사건 ${new Set(dark.map((i) => i.reference)).size}건`;
+    } catch (e) {
+      const msg = (e as Error).message;
+      out.status.incidents += /HTTP 404/.test(msg) ? " · 다크웹 사건 표는 아직 없다" : ` · 다크웹 사건을 못 읽었다 (${msg})`;
+    }
   }
 
   try {

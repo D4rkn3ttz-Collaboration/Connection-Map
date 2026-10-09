@@ -73,7 +73,7 @@ type Pick =
 - `show()` 와 `showIsland()` 는 같은 영토·유형을 다시 골라도 매번 그쪽으로 이동할 수 있도록 부르는 손잡이로 둔다
 - 확대는 3D 안 일이라 손잡이를 열지 않고, **휠 · 두 손가락으로만** 한다(Figma 에 확대 단추가 없다). 끌어서 돈 각은 `onAngleChange` 로 알린다
 - 패널 「연결」 탭의 이어진 반대쪽 영토 목록은 3D 에서 받지 않고 `src/lib/links.ts` 의 `linksOf(lines, selected, layouts)` 로 같은 답을 얻는다
-- 패널 「사건」 탭은 `public.incidents`와 `public.incidents_data_types`의 오픈웹 사건 제목·날짜·상태·노출 유형을 보여 준다. 공개 연결 기록의 사건 ID와 관측 시각도 함께 표시한다
+- 패널 「사건」 탭은 `public.incidents`와 `public.incidents_data_types`의 오픈웹 사건 제목·날짜·상태·노출 유형을 보여 준다. 공개 연결 기록의 사건 ID와 관측 시각도 함께 표시한다. 다크웹 영토는 `public.dark_events`(아래 「다크웹 사건」)의 사건을 보여 준다
 - `src/components/Demo.tsx` 는 `TopBar` 의 검색, 3D 선택, 오른쪽 상세 패널을 같은 상태로 연결한다
 
 ## 상세 패널
@@ -171,6 +171,14 @@ type Pick =
 `?open=`으로 배치 결과 파일을 지정할 수도 있다. 같은 프로젝트의 `public.incidents`와 `public.incidents_data_types`를 공개 열쇠로 읽어
 `incidents.platform_id`를 `open_layout.territory_id`의 `platform-<번호>`에 맞춘다. 사건 탭에는 제목·게시일(없으면 등록일)·상태와
 노출 유형·설명을 표시한다. 500줄씩 나누어 읽으며, 사건 조회가 실패해도 영토는 그대로 그린다.
+
+### 다크웹 사건 — 표 `public.dark_events`
+
+다크웹 지도(다크초코)가 배포할 때마다 `dark_layout` 과 함께 통째로 새로 바꾼다(2026-10-09). 칸은 분류 값 · 번호뿐이다 —
+사건 번호(`LEAK-n`) · 게시처 영토 · 행위자 영토 · 게시 시각 · 종류 · 판정 · 규모 · 위험도 · 유출 항목 분류 · 산업 · 국가 · 재게시 ·
+사기 의심 · 외부 확인 분류. 자료 제목 · 피해 조직 칸은 없어서 패널 제목 자리에는 사건 종류(피해 주장 · 판매 …)를 쓴다.
+허위 판정 · 반출 제외 사건은 표에 없다(2D 다크웹 지도와 같다). 행위자 영토에서도 그 행위자의 사건을 센다.
+표가 아직 없으면 오류가 아니라 「다크웹 사건 표는 아직 없다」 로 적는다(`src/lib/dark-incidents.ts`).
 
 ### 연결 — 공개 뷰 `links_public`
 
