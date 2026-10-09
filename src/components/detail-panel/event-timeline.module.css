@@ -87,8 +87,8 @@
   overflow-wrap: anywhere;
 }
 .selected {
-  margin-top: 22px;
-  padding-top: 14px;
+  margin: 8px 0 14px 9px;
+  padding: 12px 9px 0;
   border-top: 1px solid #e8edf5;
 }
 .selected h3 {

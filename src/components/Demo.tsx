@@ -9,7 +9,8 @@ import TopBar from "@/components/TopBar";
 import { DetailPanel } from "@/components/detail-panel/DetailPanel";
 import { LegendPanel } from "@/components/legend-panel/LegendPanel";
 import { useDetailPanel } from "@/hooks/useDetailPanel";
-import { searchTerritories, type Layout } from "@/lib/layout.ts";
+import type { Layout } from "@/lib/layout.ts";
+import { searchAll, type SearchResult } from "@/lib/search.ts";
 import { focusOf } from "@/lib/links.ts";
 import { loadSceneData, type SceneData } from "@/lib/load.ts";
 import { START_ANGLE } from "@/lib/scene.ts";
@@ -43,7 +44,7 @@ export default function Demo() {
 
   const layouts = useMemo(() => ({ dark: data?.dark ?? null, open: data?.open ?? null }), [data]);
   const lines = useMemo(() => data?.lines ?? [], [data]);
-  const hits = useMemo(() => searchTerritories([layouts.dark, layouts.open], query), [layouts, query]);
+  const hits = useMemo(() => searchAll(layouts, data?.incidents ?? [], lines, query), [layouts, data?.incidents, lines, query]);
 
   const guide = (() => {
     if (panel.incident) return `${panel.incident.reference} 선택 · 연결 ${panel.incident.linkIds.length}건`;
@@ -63,9 +64,22 @@ export default function Demo() {
     setQuery("");
   };
 
+  const chooseSearch = (hit: SearchResult) => {
+    if (hit.target.kind === "territory") choose(hit.target);
+    if (hit.target.kind === "link") {
+      panel.select({ kind: "link", link_id: hit.target.link_id });
+      setQuery("");
+    }
+    if (hit.target.kind === "incident") {
+      scene.current?.show(hit.target.incident.territory);
+      panel.openIncident(hit.target.incident);
+      setQuery("");
+    }
+  };
+
   return (
     <main className="flex h-full flex-col bg-app">
-      <TopBar query={query} onQueryChange={setQuery} hits={hits} onChoose={choose} />
+      <TopBar query={query} onQueryChange={setQuery} hits={hits} onChoose={chooseSearch} />
 
       <div className="relative flex min-h-0 flex-1">
         <LegendPanel openLayout={layouts.open} darkLayout={layouts.dark} />
@@ -131,6 +145,7 @@ export default function Demo() {
           tab={panel.tab}
           collapsed={panel.collapsed}
           selectedIncidentId={panel.incident?.id ?? null}
+          revealToken={panel.revealToken}
           connectionsUnavailable={data?.bad.links}
           onTab={panel.selectTab}
           onCollapse={panel.toggleCollapsed}

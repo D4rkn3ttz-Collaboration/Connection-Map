@@ -25,6 +25,7 @@ export interface DetailPanelProps {
   tab: DetailTab;
   collapsed: boolean;
   selectedIncidentId: string | null;
+  revealToken: number;
   connectionsUnavailable?: boolean;
   incidentsUnavailable?: boolean;
   /** Supabase 오픈웹 사건. 다크웹 연결 기록의 사건 ID와 합쳐 표시한다. */
@@ -102,7 +103,7 @@ export function DetailPanel(props: DetailPanelProps) {
               onSelect={props.onTab}
             />
             <div
-              key={`${subject.key}:${props.tab}`}
+              key={`${subject.key}:${props.tab}:${props.revealToken}`}
               className={styles.content}
               role="tabpanel"
               id={`${id}-${props.tab}-panel`}
@@ -122,6 +123,7 @@ export function DetailPanel(props: DetailPanelProps) {
                   name={subject.title}
                   incidents={incidents}
                   selectedId={props.selectedIncidentId}
+                  revealOnMount={props.revealToken > 0}
                   unavailable={
                     incidents.length === 0 &&
                     ((subject.territories.some((item) => item.web === "open") &&
