@@ -17,6 +17,8 @@ export type TerritoryRef = { web: Web; territory_id: string };
 export interface LinkScene3DHandle {
   /** 찾은 영토 보여 주기 — 그 영토를 고르고(onSelect), 판 옆 · 뒤쪽이면 앞으로 돌리고, 다가간다. 없는 영토면 false */
   show(t: TerritoryRef): boolean;
+  /** 섬 전체를 고르고(onSelect) 가운데로 이동한다. */
+  showIsland(island: Extract<Pick, { kind: "island" }>): boolean;
 }
 
 export interface LinkScene3DProps {
@@ -120,6 +122,11 @@ export default function LinkScene3D(props: LinkScene3DProps) {
       show(t) {
         const ok = viewRef.current?.show(t.web, t.territory_id) ?? false;
         if (ok) latest.current.onSelect({ kind: "territory", web: t.web, territory_id: t.territory_id });
+        return ok;
+      },
+      showIsland(island) {
+        const ok = viewRef.current?.showIsland(island.web, island.island_id) ?? false;
+        if (ok) latest.current.onSelect(island);
         return ok;
       },
     }),

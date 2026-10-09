@@ -14,13 +14,14 @@ import { DetailTabs } from "./DetailTabs";
 import { OverviewTab } from "./OverviewTab";
 import { EventsTab } from "./EventsTab";
 import { ConnectionsTab } from "./ConnectionsTab";
-import { DetailEmptyState } from "./DetailEmptyState";
+import { EcosystemOverview } from "./EcosystemOverview";
 import styles from "./detail-panel.module.css";
 
 export interface DetailPanelProps {
   subject: Pick | null;
   selected: Pick | null;
   layouts: Layouts;
+  loading?: boolean;
   lines: LinkLine[];
   tab: DetailTab;
   collapsed: boolean;
@@ -36,6 +37,7 @@ export interface DetailPanelProps {
   onSelectLink: (id: string) => void;
   onBack: () => void;
   onShowTerritory: (territory: TerritoryRef) => void;
+  onShowIsland: (island: Extract<Pick, { kind: "island" }>) => void;
 }
 
 export function DetailPanel(props: DetailPanelProps) {
@@ -73,12 +75,10 @@ export function DetailPanel(props: DetailPanelProps) {
         hidden={props.collapsed}
         aria-label={subject ? `${subject.title} 상세 패널` : "상세 패널"}
       >
-        <header className={styles.header}>
-          {subject && (
-            <p className={styles.eyebrow}>
-              {subject.eyebrow}
-            </p>
-          )}
+        <header className={styles.header} data-summary={!subject}>
+          <p className={styles.eyebrow}>
+            {subject?.eyebrow ?? "오픈웹 · 다크웹"}
+          </p>
           <button
             type="button"
             className={styles.close}
@@ -87,7 +87,7 @@ export function DetailPanel(props: DetailPanelProps) {
           >
             ×
           </button>
-          <h2>{subject?.title ?? "상세 정보"}</h2>
+          <h2>{subject?.title ?? "전체 현황"}</h2>
           {subject?.breadcrumb && (
             <p className={styles.breadcrumb}>{subject.breadcrumb}</p>
           )}
@@ -149,9 +149,10 @@ export function DetailPanel(props: DetailPanelProps) {
           </>
         ) : (
           <div className={styles.content}>
-            <DetailEmptyState
-              title="선택한 영토가 없습니다."
-              description="지도에서 영토를 선택하거나 위쪽 검색창에서 찾아보세요."
+            <EcosystemOverview
+              layouts={props.layouts}
+              loading={Boolean(props.loading)}
+              onShowIsland={props.onShowIsland}
             />
           </div>
         )}

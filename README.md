@@ -50,6 +50,7 @@ const scene = useRef<LinkScene3DHandle>(null);
 />
 
 scene.current?.show({ web: "dark", territory_id: "forum-xxx" });  // 검색 결과 고르기
+scene.current?.showIsland({ kind: "island", web: "open", island_id: "COMMUNITY" });  // 유형으로 이동
 ```
 
 | 손잡이 | 방향 | 꼴 | 쓰는 둘레 기능 |
@@ -57,6 +58,7 @@ scene.current?.show({ web: "dark", territory_id: "forum-xxx" });  // 검색 결�
 | `selected` | 받음 | `Pick \| null` | 패널 · 정보 · 사이트 이동 버튼이 읽고, 패널 닫기는 `null` 로 |
 | `onSelect` | 알림 | `(pick: Pick \| null) => void` — 영토를 누르면 그 영토, 같은 영토를 다시 누르거나 빈 곳을 누르거나 Esc 면 `null` | 패널 열기 · 제목 줄 · 안내 알약 |
 | `show()` | 부름(ref) | `show({ web, territory_id }): boolean` — 그 영토를 고르고(onSelect), 판 옆 · 뒤쪽이면 앞으로 돌리고, 다가간다 | 검색 결과 고르기 |
+| `showIsland()` | 부름(ref) | `showIsland({ kind: "island", web, island_id }): boolean` — 섬 전체를 고르고 가운데로 이동한다 | 상세 패널 유형 고르기 |
 | `onHover` | 알림 | `(t: { web, territory_id } \| null) => void` | 왼쪽 아래 정보 |
 | `showAllLinks` | 받음 | `boolean` — 고른 것과 상관없이 연결선을 모두 그린다. 고른 것이 있으면 그것과 이어진 선만 진하고 나머지는 옅다 | 「전체 관계 보기」 토글(켜면 연결선 전부, 끄면 고른 것의 선만) |
 | `angle` · `onAngleChange` | 받음 · 알림 | `number`(0 ~ 360, 처음 160) · `(deg) => void` — 끌기 · `show()` 로 돌면 알린다 | 오른쪽 아래 회전 슬라이더 |
@@ -68,7 +70,7 @@ type Pick =
   | { kind: "link"; link_id: string };                             // 패널 연결 카드에서 관계 하나(Figma ③-3)
 ```
 
-- `show()` 만 「부르는」 손잡이인 까닭: 같은 영토를 두 번 찾으면 두 번 다 그쪽으로 가야 한다. 값은 같아 안 바뀌므로 부르기로 둔다
+- `show()` 와 `showIsland()` 는 같은 영토·유형을 다시 골라도 매번 그쪽으로 이동할 수 있도록 부르는 손잡이로 둔다
 - 확대는 3D 안 일이라 손잡이를 열지 않고, **휠 · 두 손가락으로만** 한다(Figma 에 확대 단추가 없다). 끌어서 돈 각은 `onAngleChange` 로 알린다
 - 패널 「연결」 탭의 이어진 반대쪽 영토 목록은 3D 에서 받지 않고 `src/lib/links.ts` 의 `linksOf(lines, selected, layouts)` 로 같은 답을 얻는다
 - 패널 「사건」 탭은 `public.incidents`와 `public.incidents_data_types`의 오픈웹 사건 제목·날짜·상태·노출 유형을 보여 준다. 공개 연결 기록의 사건 ID와 관측 시각도 함께 표시한다
@@ -76,7 +78,7 @@ type Pick =
 
 ## 상세 패널
 
-왼쪽 범례에서 섬 색과 연결선 신뢰도를 볼 수 있다. 오른쪽 `상세 보기`는 영토를 고르기 전에도 열 수 있고, 영토를 고르면 `개요 · 사건 · 연결` 탭이 자동으로 펼쳐진다. 사건 탭은 기간별로 걸러 볼 수 있다. 사건이나 연결을 고르면 3D 장면의 선택 상태에도 반영된다. 공개 연결 기록이 없으면 빈 상태를 표시한다.
+왼쪽 범례에서 섬 색과 연결선 신뢰도를 볼 수 있다. 오른쪽 `상세 보기`는 영토를 고르기 전에도 열 수 있다. 전체 현황에서 유형을 누르면 해당 섬으로 이동하고, `포함된 영토`에서 개별 영토를 고를 수 있다. 영토를 고르면 `개요 · 사건 · 연결` 탭이 자동으로 펼쳐진다. 사건 탭은 기간별로 걸러 볼 수 있다. 사건이나 연결을 고르면 3D 장면의 선택 상태에도 반영된다. 공개 연결 기록이 없으면 빈 상태를 표시한다.
 
 - 화면: `src/components/detail-panel/` (탭별 컴포넌트와 CSS Modules)
 - 선택 상태: `src/hooks/useDetailPanel.ts`
@@ -123,6 +125,7 @@ type Pick =
 | 휠 · 두 손가락 벌리기 · 오므리기 | 다가가기 · 물러나기(0.8 ~ 6 배). 짚은 자리가 화면에서 제자리에 남는다(지도 앱과 같다). 확대 1 까지 물러나면 바라보는 점이 처음 자리(두 판 가운데)로 돌아온다(회전 각은 그대로) |
 | 영토 누르기 | `onSelect` 로 알린다. 같은 영토를 다시 누르거나 빈 곳을 누르거나 Esc 면 `null` |
 | `show()` | 그 영토를 고르고, 앞에서 60° 밖(판 옆 · 뒤쪽)이면 바로 앞에 오게 돌린 뒤 2.6 배로 다가간다(이미 더 가까우면 거리는 그대로). 움직임을 줄인 설정에서는 바로 건너간다 |
+| `showIsland()` | 유형에 속한 영토를 함께 고르고, 섬 가운데로 이동하며 섬 크기에 맞춰 확대한다 |
 
 ## 코드 자리
 

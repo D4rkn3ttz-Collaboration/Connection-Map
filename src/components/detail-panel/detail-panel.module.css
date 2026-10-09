@@ -46,6 +46,12 @@
 .header h2:last-child {
   margin-bottom: 0;
 }
+.header[data-summary="true"] .eyebrow {
+  font-size: 12px;
+}
+.header[data-summary="true"] h2 {
+  font-size: 19px;
+}
 .breadcrumb {
   margin: 0;
   font-size: 11px;
@@ -343,7 +349,7 @@
   cursor: pointer;
 }
 .textButton:hover {
-  text-decoration: underline;
+  color: #155ec9;
 }
 .connections {
   display: grid;

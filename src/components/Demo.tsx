@@ -10,7 +10,7 @@ import { DetailPanel } from "@/components/detail-panel/DetailPanel";
 import { LegendPanel } from "@/components/legend-panel/LegendPanel";
 import { useDetailPanel } from "@/hooks/useDetailPanel";
 import { searchTerritories, type Layout } from "@/lib/layout.ts";
-import { focusOf } from "@/lib/links.ts";
+import { focusOf, type Pick } from "@/lib/links.ts";
 import { loadSceneData, type SceneData } from "@/lib/load.ts";
 import { START_ANGLE } from "@/lib/scene.ts";
 
@@ -53,6 +53,12 @@ export default function Demo() {
       const n = nameOf(layouts, selected) ?? selected.territory_id;
       return `${n} — ${f.lonely ? "다른 층과 연결 없음" : `반대쪽 연결 ${f.lines.length}건`}`;
     }
+    if (selected?.kind === "island") {
+      const island = layouts[selected.web]?.islands.find((item) => item.id === selected.island_id);
+      return island
+        ? `${WEB_LABEL[selected.web]} · ${island.name} 선택 · 영토 ${island.territories.length}개`
+        : "영토 클릭 → 연결된 영토와 선 표시";
+    }
     if (hover) return nameOf(layouts, hover) ?? "";
     return "영토 클릭 → 연결된 영토와 선 표시";
   })();
@@ -60,6 +66,11 @@ export default function Demo() {
   const choose = (h: TerritoryRef) => {
     // WebGL을 사용할 수 없는 환경에서도 검색 결과의 상세 정보를 연다.
     if (!scene.current?.show(h)) panel.select({ kind: "territory", ...h });
+    setQuery("");
+  };
+
+  const chooseIsland = (island: Extract<Pick, { kind: "island" }>) => {
+    if (!scene.current?.showIsland(island)) panel.select(island);
     setQuery("");
   };
 
@@ -107,24 +118,13 @@ export default function Demo() {
               <output className="w-9 text-right font-medium tabular-nums text-accent">{angle}°</output>
             </label>
           </div>
-
-          <ul className="space-y-0.5 text-xs text-ink-soft">
-            {data ? (
-              (["dark", "open", "incidents", "links"] as const).map((k) => (
-                <li key={k} className={data.bad[k] ? "text-accent" : undefined}>
-                  {data.status[k]}
-                </li>
-              ))
-            ) : (
-              <li>다크웹 배치 결과를 받는 중</li>
-            )}
-          </ul>
         </section>
 
         <DetailPanel
           subject={panel.subject}
           selected={selected}
           layouts={layouts}
+          loading={!data}
           lines={lines}
           incidents={data?.incidents}
           incidentsUnavailable={data?.bad.incidents}
@@ -139,6 +139,7 @@ export default function Demo() {
           onSelectLink={panel.selectLink}
           onBack={panel.clearLink}
           onShowTerritory={choose}
+          onShowIsland={chooseIsland}
         />
       </div>
     </main>
