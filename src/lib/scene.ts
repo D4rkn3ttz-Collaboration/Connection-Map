@@ -260,3 +260,30 @@ export function rayPlaneY(o: P3, d: P3, y: number): P3 | null {
   if (s <= 0) return null;
   return { x: o.x + d.x * s, y, z: o.z + d.z * s };
 }
+
+/**
+ * 점들의 평균에서 가장 가까운 점의 자리(같으면 앞의 것). 없으면 -1.
+ * 연결선 끝 · 찾은 영토 자리를 영토 칸 위에 두려고 쓴다 — 모양이 고르지 않은 영토는 칸들의 평균이 그 영토 칸 밖
+ * (빈 자리나 이웃 영토 위)에 떨어질 수 있다(2026-10-09 결정)
+ */
+export function nearestToMean(pts: { x: number; z: number }[]): number {
+  if (!pts.length) return -1;
+  let mx = 0;
+  let mz = 0;
+  for (const p of pts) {
+    mx += p.x;
+    mz += p.z;
+  }
+  mx /= pts.length;
+  mz /= pts.length;
+  let best = 0;
+  let bd = Infinity;
+  pts.forEach((p, i) => {
+    const d = (p.x - mx) ** 2 + (p.z - mz) ** 2;
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}

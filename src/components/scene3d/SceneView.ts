@@ -13,7 +13,7 @@ import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
 import { axialToXZ, edgeSegments, plateBounds, type Layout, type Territory, type Web } from "@/lib/layout.ts";
-import { focusOf, lineStyle, type LinkLine, type Pick } from "@/lib/links.ts";
+import { focusOf, lineStyle, pickedLines, strandsOf, type LinkLine, type Pick, type Strand } from "@/lib/links.ts";
 import {
   FOCUS_ZOOM,
   FOV_DEG,
@@ -27,6 +27,7 @@ import {
   clampZoom,
   fitCamera,
   focusAngle,
+  nearestToMean,
   normAngle,
   pinchZoom,
   rayPlaneY,
@@ -380,7 +381,9 @@ export class SceneView {
    * 관계를 고르면 그 두 끝 영토만
    */
   private applyFocus(): void {
-    const f = focusOf(this.pick, { dark: this.plates.dark?.layout ?? null, open: this.plates.open?.layout ?? null }, this.lines, this.showAll);
+    const layouts = { dark: this.plates.dark?.layout ?? null, open: this.plates.open?.layout ?? null };
+    const f = focusOf(this.pick, layouts, this.lines, this.showAll);
+    const picked = pickedLines(this.pick, layouts, this.lines, this.showAll);
     for (const web of ["dark", "open"] as const) {
       const p = this.plates[web];
       if (!p) continue;
@@ -392,26 +395,20 @@ export class SceneView {
         if (!on) c.want.lerp(FADE, 0.78);
       }
     }
-    this.drawLinks(f.lines);
+    this.drawLinks(strandsOf(f.lines, picked));
     this.kick();
   }
 
   /**
-   * 영토 가운데 한 점 (판 좌표). top 은 그 영토 가장 높은 블록 위, bottom 은 판 아래.
+   * 영토 한 점 (판 좌표) — 칸들의 평균에서 가장 가까운 그 영토 칸(`nearestToMean`). top 은 그 칸 윗면, bottom 은 판 아래.
    * settled 면 쌓인 높이 대신 고르기로 갈 높이(납작해질 블록이면 바닥)를 쓴다 — 연결선 끝이 블록 위에 뜨지 않게
    */
   private anchor(p: Plate, id: string, where: "top" | "bottom", settled = false): P3 | null {
     const idx = p.byTerritory.get(id);
     if (!idx?.length) return null;
-    let x = 0;
-    let z = 0;
-    let h = 0;
-    for (const i of idx) {
-      x += p.cells[i].x;
-      z += p.cells[i].z;
-      h = Math.max(h, settled ? p.cells[i].target : p.cells[i].base);
-    }
-    return { x: x / idx.length, y: p.group.position.y + (where === "top" ? h : -0.6), z: z / idx.length };
+    const c = p.cells[idx[nearestToMean(idx.map((i) => p.cells[i]))]];
+    const h = settled ? c.target : c.base;
+    return { x: c.x, y: p.group.position.y + (where === "top" ? h : -0.6), z: c.z };
   }
 
   private clearLinks(): void {
@@ -424,15 +421,18 @@ export class SceneView {
     this.linkMats.length = 0;
   }
 
-  /** 연결선 — 오픈웹 판 아래에서 내려와 다크웹 영토 윗면에 닿는 곡선, 아래 끝에 동그라미(설계서 4.4 · Figma ③-3) */
-  private drawLinks(hit: LinkLine[]): void {
+  /**
+   * 연결선 — 오픈웹 판 아래에서 내려와 다크웹 영토 윗면에 닿는 곡선, 아래 끝에 동그라미(설계서 4.4 · Figma ③-3).
+   * 같은 영토 쌍은 선 하나(`strandsOf`). 진하지 않은 선(전체 관계 보기에서 고른 것 밖)은 옅고 가늘게, 동그라미 없이
+   */
+  private drawLinks(strands: Strand[]): void {
     this.clearLinks();
     const dark = this.plates.dark;
     const open = this.plates.open;
     if (!dark || !open) return;
     const w = this.renderer.domElement.width / this.renderer.getPixelRatio();
     const h = this.renderer.domElement.height / this.renderer.getPixelRatio();
-    for (const l of hit) {
+    for (const l of strands) {
       const d = this.anchor(dark, l.darkId, "top", true);
       const o = this.anchor(open, l.openId, "bottom");
       if (!d || !o) continue;
@@ -446,23 +446,28 @@ export class SceneView {
       const geo = new LineGeometry();
       geo.setPositions(pts.flatMap((p) => [p.x, p.y, p.z]));
       const st = lineStyle(l.confidence);
+      // 진한 선 1, 신뢰도가 빈 선 0.45, 고른 것 밖의 선 0.3
+      const alpha = !l.strong ? 0.3 : st.faint ? 0.45 : 1;
       const mat = new LineMaterial({
         color: LINK_COLOR,
-        linewidth: st.faint ? 1.2 : 2.5,
+        linewidth: st.faint || !l.strong ? 1.2 : 2.5,
         dashed: st.dashed,
         dashSize: st.dash,
         gapSize: st.gap,
-        transparent: st.faint,
-        opacity: st.faint ? 0.45 : 1,
+        transparent: alpha < 1,
+        opacity: alpha,
       });
       mat.resolution.set(w, h);
       const line = new Line2(geo, mat);
       line.computeLineDistances();
       this.linkMats.push(mat);
-      const dot = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.marker, depthTest: false }));
+      this.linkGroup.add(line);
+      if (!l.strong) continue;
+      // 동그라미도 선과 같은 세기로 — 신뢰도가 빈 선은 옅게
+      const dot = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.marker, depthTest: false, transparent: true, opacity: alpha }));
       dot.position.copy(to);
       dot.scale.setScalar(1.6);
-      this.linkGroup.add(line, dot);
+      this.linkGroup.add(dot);
     }
   }
 

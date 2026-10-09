@@ -32,7 +32,7 @@ export interface LinkScene3DProps {
   onSelect(pick: Pick | null): void;
   /** 마우스를 올린 영토가 바뀌었다 */
   onHover?(t: TerritoryRef | null): void;
-  /** 「전체 관계 보기」 — 고른 것과 상관없이 연결선을 모두 그린다 */
+  /** 「전체 관계 보기」 — 고른 것과 상관없이 연결선을 모두 그린다. 고른 것이 있으면 그것과 이어진 선만 진하다 */
   showAllLinks?: boolean;
   /** 회전 각(0 ~ 360, 처음 160). 주지 않으면 장면이 혼자 들고 있다 */
   angle?: number;

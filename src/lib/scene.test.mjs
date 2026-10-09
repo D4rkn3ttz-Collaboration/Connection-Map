@@ -16,6 +16,7 @@ import {
   clampZoom,
   fitCamera,
   focusAngle,
+  nearestToMean,
   pinchZoom,
   projectPoint,
   rayPlaneY,
@@ -162,4 +163,13 @@ test('16. 바라보는 점은 판 안에 묶이고, 찾은 영토는 옆 · 뒤�
   assert.deepEqual(rayPlaneY({ x: 0, y: 10, z: 0 }, { x: 1, y: -1, z: 0 }, 0), { x: 10, y: 0, z: 0 });
   assert.equal(rayPlaneY({ x: 0, y: 10, z: 0 }, { x: 1, y: 1, z: 0 }, 0), null, '평면이 뒤쪽');
   assert.equal(rayPlaneY({ x: 0, y: 10, z: 0 }, { x: 1, y: 0, z: 0 }, 0), null, '나란하다');
+});
+
+test('19. 연결선 끝은 영토 칸 위 — 칸들의 평균이 칸 밖이면 평균에 가장 가까운 칸 (2026-10-09)', () => {
+  // ㄷ 자 영토 — 평균 (6/7, 1) 은 빈 가운데에 떨어진다. 가장 가까운 칸은 (0, 1)
+  const u = [{ x: 0, z: 0 }, { x: 1, z: 0 }, { x: 2, z: 0 }, { x: 0, z: 1 }, { x: 0, z: 2 }, { x: 1, z: 2 }, { x: 2, z: 2 }];
+  assert.equal(nearestToMean(u), 3);
+  assert.equal(nearestToMean([{ x: 5, z: 5 }]), 0);
+  assert.equal(nearestToMean([]), -1);
+  assert.equal(nearestToMean([{ x: -1, z: 0 }, { x: 1, z: 0 }]), 0, '같은 거리면 앞의 것');
 });

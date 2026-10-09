@@ -150,7 +150,7 @@ export async function loadSceneData(params: URLSearchParams): Promise<SceneData>
     }
     const n = Array.isArray(rows) ? rows.length : 0;
     if (n === 0) {
-      out.status.links = `연결 자료 없음 — ${from === "통합 DB" ? "공개 뷰에 DB 반영이 켜진 줄이 아직 없다" : "파일에 줄이 없다"}`;
+      out.status.links = `연결 자료 없음 — ${from === "통합 DB" ? "공개 뷰에 나올 줄(DB 반영 · 확정)이 아직 없다" : "파일에 줄이 없다"}`;
       return out;
     }
     const res = matchLinks(rows, out.dark, out.open);

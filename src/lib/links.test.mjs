@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseLayout } from './layout.ts';
-import { LINKS_VIEW_SELECT, focusOf, lineStyle, linksMissing, linksOf, matchLinks } from './links.ts';
+import { LINKS_VIEW_SELECT, confidenceRank, focusOf, lineStyle, linksMissing, linksOf, matchLinks, pickedLines, strandsOf } from './links.ts';
 import { DARK, OPEN } from './fixtures.mjs';
 
 test('7. 연결 줄은 영토 번호나 이름으로 잇고, 한쪽이라도 없으면 버린다', () => {
@@ -97,7 +97,7 @@ test('17. 고른 것 → 높이를 지킬 영토 · 그릴 선 — 영토 · 섬
     assert.equal(focusOf(p, L, lines).keep.dark, null, JSON.stringify(p));
   }
   assert.equal(focusOf({ kind: 'territory', web: 'open', territory_id: 'paste-1' }, { dark: d, open: null }, lines).keep.open, null);
-  // 연결선 꼴은 신뢰도대로 — 높음 실선 · 중간 파선 · 낮음 점선, 모르는 값은 실선
+  // 연결선 꼴은 신뢰도대로 — 높음 실선 · 중간 파선 · 낮음 점선, 빈 값 · 모르는 값은 옅은 선(아래)
   assert.equal(lineStyle('상').dashed, false);
   assert.equal(lineStyle('높음').dashed, false);
   assert.ok(lineStyle('중').dashed && lineStyle('중간').dash > lineStyle('하').dash, '파선이 점선보다 길다');
@@ -108,4 +108,49 @@ test('17. 고른 것 → 높이를 지킬 영토 · 그릴 선 — 영토 · 섬
   assert.equal(lineStyle('').faint, true);
   assert.equal(lineStyle('???').faint, true);
   for (const c of ['상', '높음', '중', '하', '낮음']) assert.equal(lineStyle(c).faint, false, c);
+});
+
+test('18. 같은 영토 쌍은 선 하나 — 가장 높은 신뢰도의 꼴, 전체 관계 보기에서는 고른 것만 진하게 (2026-10-09)', () => {
+  const L = (id, darkId, openId, confidence) => ({ id, darkId, openId, relType: '', confidence });
+  const lines = [L('A', 'd1', 'o1', '하'), L('B', 'd1', 'o1', '상'), L('C', 'd2', 'o1', ''), L('D', 'd1', 'o2', '중')];
+  const all = strandsOf(lines);
+  assert.equal(all.length, 3);
+  const pair = all.find((s) => s.darkId === 'd1' && s.openId === 'o1');
+  assert.deepEqual(pair.ids, ['A', 'B']);
+  assert.equal(pair.confidence, '상', '합친 선은 가장 높은 신뢰도의 꼴');
+  assert.ok(all.every((s) => s.strong), '고른 것이 없으면 다 진하다');
+  // 고른 연결(A · 하)이 든 쌍만 진하고, 그 선은 고른 연결의 꼴을 따른다 — 앞뒤 차례가 바뀌어도 같다
+  for (const order of [lines, [lines[1], lines[0], lines[2], lines[3]]]) {
+    const s = strandsOf(order, [lines[0]]);
+    const p = s.find((x) => x.darkId === 'd1' && x.openId === 'o1');
+    assert.equal(p.strong, true);
+    assert.equal(p.confidence, '하');
+    assert.deepEqual(s.filter((x) => !x.strong).map((x) => x.ids[0]).sort(), ['C', 'D']);
+  }
+  // 고른 것 밖의 쌍에 연결이 둘이면 그 가운데 가장 높은 신뢰도 — 뒤 것이 높아도
+  const w = [L('X', 'd3', 'o3', '하'), L('Y', 'd3', 'o3', '상'), L('Z', 'd9', 'o9', '중')];
+  for (const order of [w, [w[1], w[0], w[2]]]) {
+    const p = strandsOf(order, [w[2]]).find((x) => x.darkId === 'd3');
+    assert.equal(p.strong, false);
+    assert.equal(p.confidence, '상');
+  }
+  assert.ok(strandsOf(lines, []).every((s) => !s.strong), '고른 것에 이어진 연결이 없으면 다 옅다');
+  assert.deepEqual([confidenceRank('상'), confidenceRank('중간'), confidenceRank('low'), confidenceRank(''), confidenceRank('???')], [3, 2, 1, 0, 0]);
+  for (const c of ['상', '중', '하', '', '???']) assert.equal(lineStyle(c).faint, confidenceRank(c) === 0, c);
+  assert.deepEqual(strandsOf([]), []);
+});
+
+test('20. 진하게 그릴 연결 — 전체 관계 보기를 켜고 고른 것이 있을 때만 (2026-10-09)', () => {
+  const d = parseLayout(DARK, 'dark');
+  const o = parseLayout(OPEN, 'open');
+  const L = { dark: d, open: o };
+  const t0 = d.territories[0].id;
+  const lines = [{ id: 'K1', darkId: t0, openId: o.territories[0].id, relType: '', confidence: '상' }];
+  const pick = { kind: 'territory', web: 'dark', territory_id: t0 };
+  assert.equal(pickedLines(pick, L, lines, false), null, '끄면 null');
+  assert.equal(pickedLines(null, L, lines, true), null, '고른 것이 없으면 null');
+  assert.equal(pickedLines({ kind: 'territory', web: 'dark', territory_id: 'nope' }, L, lines, true), null, '없는 것을 고르면 null');
+  assert.deepEqual(pickedLines(pick, L, lines, true).map((l) => l.id), ['K1']);
+  const lonely = d.territories.find((t) => t.id !== t0).id;
+  assert.deepEqual(pickedLines({ kind: 'territory', web: 'dark', territory_id: lonely }, L, lines, true), [], '연결 없는 영토면 []');
 });
