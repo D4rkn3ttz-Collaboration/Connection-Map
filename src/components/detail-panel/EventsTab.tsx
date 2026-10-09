@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   dateParts,
   incidentGroups,
@@ -30,6 +30,7 @@ export function EventsTab({
   name,
   incidents,
   selectedId,
+  revealOnMount,
   unavailable,
   onSelect,
   onSelectLink,
@@ -37,18 +38,29 @@ export function EventsTab({
   name: string;
   incidents: PanelIncident[];
   selectedId: string | null;
+  revealOnMount: boolean;
   unavailable: boolean;
   onSelect: (incident: PanelIncident) => void;
   onSelectLink: (id: string) => void;
 }) {
   const [now] = useState(() => Date.now());
-  const [period, setPeriod] = useState<Period>("90");
+  const [period, setPeriod] = useState<Period>("all");
   const [editingDates, setEditingDates] = useState(false);
   const [customRange, setCustomRange] = useState({
     from: koreanDate(now, 90),
     to: koreanDate(now),
   });
-  const [limit, setLimit] = useState(5);
+  const [limit, setLimit] = useState(() =>
+    revealOnMount && selectedId
+      ? Math.max(5, incidents.findIndex((item) => item.id === selectedId) + 1)
+      : 5,
+  );
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!revealOnMount) return;
+    const frame = requestAnimationFrame(() => selectedRef.current?.scrollIntoView({ block: "center" }));
+    return () => cancelAnimationFrame(frame);
+  }, [revealOnMount]);
   const range =
     period === "all"
       ? null
@@ -170,6 +182,7 @@ export function EventsTab({
                     <li key={incident.id}>
                       <button
                         type="button"
+                        ref={selectedId === incident.id ? selectedRef : undefined}
                         className={timeline.event}
                         aria-pressed={selectedId === incident.id}
                         onClick={() => onSelect(incident)}
@@ -200,6 +213,19 @@ export function EventsTab({
                             ` · 연결 ${incident.linkIds.length}건`}
                         </span>
                       </button>
+                      {selected?.id === incident.id && (
+                        <section className={timeline.selected} aria-label="선택한 사건 정보">
+                          <h3>{selected.reference}</h3>
+                          {selected.description && <p>{selected.description}</p>}
+                          {selected.status && <p>상태: {selected.status}</p>}
+                          {!selected.title && <p>공개 정보에는 사건 제목과 설명이 포함되어 있지 않습니다.</p>}
+                          {selected.linkIds.map((id) => (
+                            <button type="button" className={styles.textButton} key={id} onClick={() => onSelectLink(id)}>
+                              {id} 연결 보기 <span aria-hidden="true">→</span>
+                            </button>
+                          ))}
+                        </section>
+                      )}
                     </li>
                   ))}
                 </ol>
@@ -214,29 +240,6 @@ export function EventsTab({
             >
               사건 더 보기 <span aria-hidden="true">↓</span>
             </button>
-          )}
-          {selected && (
-            <section
-              className={timeline.selected}
-              aria-label="선택한 사건 정보"
-            >
-              <h3>{selected.reference}</h3>
-              {selected.description && <p>{selected.description}</p>}
-              {selected.status && <p>상태: {selected.status}</p>}
-              {!selected.title && (
-                <p>공개 정보에는 사건 제목과 설명이 포함되어 있지 않습니다.</p>
-              )}
-              {selected.linkIds.map((id) => (
-                <button
-                  type="button"
-                  className={styles.textButton}
-                  key={id}
-                  onClick={() => onSelectLink(id)}
-                >
-                  {id} 연결 보기 <span aria-hidden="true">→</span>
-                </button>
-              ))}
-            </section>
           )}
         </>
       )}

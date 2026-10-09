@@ -1,0 +1,24 @@
+.popup { position: absolute; right: 0; top: calc(100% + 8px); width: min(560px, calc(100vw - 32px)); max-height: min(68vh, 560px); overflow: auto; border: 1px solid #e1e6ef; border-radius: 12px; background: #fff; color: #1d2433; box-shadow: 0 20px 50px #11182726; }
+.columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.column { min-width: 0; padding: 14px 0 8px; }
+.column + .column { border-left: 1px solid #e1e6ef; }
+.webTitle { display: flex; align-items: center; gap: 8px; padding: 0 18px 14px; font-size: 13px; font-weight: 700; }
+.openDot, .darkDot { width: 8px; height: 8px; border-radius: 50%; }
+.openDot { background: #5da4ff; } .darkDot { background: #fa565e; }
+.group { margin-bottom: 9px; }
+.groupTitle { display: flex; justify-content: space-between; padding: 5px 18px 7px; color: #778195; font-size: 11px; }
+.result { display: flex; align-items: center; gap: 11px; width: 100%; min-height: 56px; padding: 7px 17px; text-align: left; color: inherit; }
+.result:hover, .result:focus-visible { outline: none; background: #f2f5fa; }
+.icon { width: 25px; flex: none; color: #8b94a3; text-align: center; font-size: 18px; }
+.resultText { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 3px; }
+.resultText strong, .resultText small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.resultText strong { font-size: 13px; font-weight: 650; }
+.resultText small { color: #778195; font-size: 11px; }
+.titleTooltip { position: fixed; z-index: 100; max-width: min(420px, calc(100vw - 16px)); border: 1px solid #d7deea; border-radius: 6px; background: #fff; padding: 7px 10px; color: #1d2433; box-shadow: 0 5px 18px #11182730; font-size: 12px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; pointer-events: none; }
+.matchOpen, .matchDark { background: transparent; font-weight: 750; }
+.matchOpen { color: #2563eb; }
+.matchDark { color: #e5484d; }
+.badge { flex: none; border: 1px solid #d7deea; border-radius: 7px; padding: 2px 6px; color: #647084; font-size: 11px; }
+.empty, .emptyColumn { padding: 12px 18px 24px; color: #778195; font-size: 12px; }
+.footer { display: flex; gap: 18px; border-top: 1px solid #e1e6ef; padding: 10px 18px; color: #778195; font-size: 11px; }
+@media (max-width: 620px) { .columns { grid-template-columns: 1fr; } .column + .column { border-left: 0; border-top: 1px solid #e1e6ef; } }

@@ -10,6 +10,7 @@ interface PanelState {
   tab: DetailTab;
   collapsed: boolean;
   incident: PanelIncident | null;
+  revealToken: number;
 }
 const initial: PanelState = {
   selected: null,
@@ -17,6 +18,7 @@ const initial: PanelState = {
   tab: "overview",
   collapsed: true,
   incident: null,
+  revealToken: 0,
 };
 
 /** 패널의 대상은 유지하고, 연결 카드나 사건을 선택하면 기존 Pick 계약으로 3D 강조만 바꾼다. */
@@ -36,6 +38,7 @@ export function useDetailPanel() {
       tab,
       selected: current.subject,
       incident: null,
+      revealToken: 0,
     }));
   const selectLink = (id: string) =>
     setState((current) => ({
@@ -43,6 +46,7 @@ export function useDetailPanel() {
       tab: "connections",
       selected: { kind: "link", link_id: id },
       incident: null,
+      revealToken: 0,
     }));
   const selectIncident = (incident: PanelIncident) =>
     setState((current) => ({
@@ -53,12 +57,22 @@ export function useDetailPanel() {
           ? { kind: "link", link_id: incident.linkIds[0] }
           : current.subject,
     }));
+  const openIncident = (incident: PanelIncident) =>
+    setState((current) => ({
+      selected: { kind: "territory", ...incident.territory },
+      subject: { kind: "territory", ...incident.territory },
+      tab: "events",
+      collapsed: false,
+      incident,
+      revealToken: current.revealToken + 1,
+    }));
   return {
     ...state,
     select,
     selectTab,
     selectLink,
     selectIncident,
+    openIncident,
     close: () => setState(initial),
     toggleCollapsed: () =>
       setState((current) => ({ ...current, collapsed: !current.collapsed })),
@@ -67,6 +81,7 @@ export function useDetailPanel() {
         ...current,
         selected: current.subject,
         incident: null,
+        revealToken: 0,
       })),
   };
 }
