@@ -125,15 +125,87 @@ export function linksOf(lines: LinkLine[], pick: Pick | null, layouts: { dark: L
 
 /**
  * 연결선 꼴 — 신뢰도대로(Figma 범례 「연결선 · 신뢰도」): 높음 실선 · 중간 파선 · 낮음 점선.
- * 모르는 값은 실선(선을 숨기지 않는다). dash · gap 은 판 단위(칸 반지름 1)다
+ * 빈 값 · 모르는 값은 옅은 가는 실선(선을 숨기지 않는다). dash · gap 은 판 단위(칸 반지름 1)다
  */
 export function lineStyle(confidence: string): { dashed: boolean; dash: number; gap: number; faint: boolean } {
-  const c = fold(confidence);
-  if (["상", "높음", "high"].includes(c)) return { dashed: false, dash: 0, gap: 0, faint: false };
-  if (["중", "중간", "medium", "mid"].includes(c)) return { dashed: true, dash: 1.6, gap: 1, faint: false };
-  if (["하", "낮음", "low"].includes(c)) return { dashed: true, dash: 0.35, gap: 0.8, faint: false };
+  const r = confidenceRank(confidence);
+  if (r === 3) return { dashed: false, dash: 0, gap: 0, faint: false };
+  if (r === 2) return { dashed: true, dash: 1.6, gap: 1, faint: false };
+  if (r === 1) return { dashed: true, dash: 0.35, gap: 0.8, faint: false };
   // 신뢰도가 비었거나 모르는 값 — 선은 숨기지 않되 옅고 가늘게 그려 「높음」 실선과 헷갈리지 않게 한다(2026-10-08)
   return { dashed: false, dash: 0, gap: 0, faint: true };
+}
+
+/** 신뢰도 순위 — 상 3 · 중 2 · 하 1, 빈 값 · 모르는 값 0. 같은 영토 쌍을 선 하나로 합칠 때 쓴다 */
+export function confidenceRank(confidence: string): number {
+  const c = fold(confidence);
+  if (["상", "높음", "high"].includes(c)) return 3;
+  if (["중", "중간", "medium", "mid"].includes(c)) return 2;
+  if (["하", "낮음", "low"].includes(c)) return 1;
+  return 0;
+}
+
+/** 3D 에 긋는 선 하나 — 같은 영토 쌍의 연결을 합친 것 */
+export interface Strand {
+  darkId: string;
+  openId: string;
+  /** 이 쌍에 든 연결 번호 */
+  ids: string[];
+  /** 꼴을 정하는 신뢰도 — 진한 연결이 있으면 그 가운데, 없으면 쌍 전체에서 가장 높은 것 */
+  confidence: string;
+  /** 고른 것과 이어진 선. false 면 「전체 관계 보기」 로 함께 그린 나머지라 옅게 · 끝 동그라미 없이 그린다 */
+  strong: boolean;
+}
+
+/**
+ * 그릴 연결 → 3D 에 긋는 선(2026-10-09 결정).
+ * 같은 영토 쌍은 같은 곡선이라 겹쳐 그리면 아래 선이 안 보인다 — 선 하나로 합치고 가장 높은 신뢰도의 꼴로 그린다.
+ * picked 를 주면(`pickedLines`) 그 안의 연결이 든 선만 진하고 나머지는 옅다. 진한 선의 꼴은 진한 연결 가운데
+ * 가장 높은 신뢰도를 따른다 — 연결 하나를 골랐으면 같은 쌍에 더 높은 연결이 있어도 고른 연결의 꼴이다
+ */
+export function strandsOf(lines: LinkLine[], picked: LinkLine[] | null = null): Strand[] {
+  const on = picked ? new Set(picked.map((l) => l.id)) : null;
+  const byPair = new Map<string, { s: Strand; best: number; bestStrong: number }>();
+  for (const l of lines) {
+    const strong = !on || on.has(l.id);
+    const rank = confidenceRank(l.confidence);
+    const key = `${l.darkId}\u0000${l.openId}`;
+    const g = byPair.get(key);
+    if (!g) {
+      byPair.set(key, {
+        s: { darkId: l.darkId, openId: l.openId, ids: [l.id], confidence: l.confidence, strong },
+        best: rank,
+        bestStrong: strong ? rank : -1,
+      });
+      continue;
+    }
+    g.s.ids.push(l.id);
+    if (strong) {
+      // 진한 연결이 처음 들어오면 그 꼴로 바꾼다 — 고른 연결의 꼴이 보여야 한다
+      if (!g.s.strong || rank > g.bestStrong) g.s.confidence = l.confidence;
+      g.s.strong = true;
+      g.bestStrong = Math.max(g.bestStrong, rank);
+    } else if (!g.s.strong && rank > g.best) {
+      g.s.confidence = l.confidence;
+    }
+    g.best = Math.max(g.best, rank);
+  }
+  return [...byPair.values()].map((g) => g.s);
+}
+
+/**
+ * 진하게 그릴 연결 — 「전체 관계 보기」 를 켜고 무언가를 골랐을 때만 그것과 이어진 연결, 아니면 null(다 진하게).
+ * 없는 영토 · 섬 · 연결을 고르면 null, 연결이 없는 영토 · 섬을 고르면 [](다 옅게)
+ */
+export function pickedLines(
+  pick: Pick | null,
+  layouts: { dark: Layout | null; open: Layout | null },
+  lines: LinkLine[],
+  showAll: boolean,
+): LinkLine[] | null {
+  if (!showAll || !pick) return null;
+  const sel = focusOf(pick, layouts, lines);
+  return sel.keep.dark || sel.keep.open ? sel.lines : null;
 }
 
 /**
