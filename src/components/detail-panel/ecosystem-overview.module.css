@@ -1,0 +1,136 @@
+.overview {
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 0 22px;
+  padding: 16px 0;
+  border: 1px solid var(--panel-line);
+  border-radius: 6px;
+}
+
+.totals > div {
+  padding: 0 14px;
+}
+
+.totals > div + div {
+  border-left: 1px solid var(--panel-line);
+}
+
+.totals dt {
+  color: var(--panel-muted);
+  font-size: 13px;
+}
+
+.totals dd {
+  margin: 4px 0 0;
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.totals dd span {
+  margin-left: 4px;
+  color: var(--panel-muted);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.totals dd .pending {
+  margin-left: 0;
+}
+
+.section + .section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--panel-line);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sectionTitle h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sectionTitle > span {
+  flex: none;
+  color: var(--panel-muted);
+  font-size: 13px;
+}
+
+.types {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.typeLink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  width: 100%;
+  padding: 8px 4px 8px 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.typeLink:hover,
+.typeLink:focus-visible {
+  background: #f2f6fc;
+  color: var(--panel-blue);
+}
+
+.typeLink:hover .typeName,
+.typeLink:focus-visible .typeName {
+  font-weight: 600;
+}
+
+.typeName {
+  min-width: 0;
+  flex: 1;
+}
+
+.hex {
+  flex: none;
+  width: 12px;
+  height: 13px;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+}
+
+.typeCount {
+  flex: none;
+  color: #647189;
+  font-variant-numeric: tabular-nums;
+}
+
+.updated {
+  margin: 12px 0 0;
+  color: var(--panel-muted);
+  font-size: 13px;
+}
+
+.message {
+  margin: 12px 0;
+  color: var(--panel-muted);
+}
