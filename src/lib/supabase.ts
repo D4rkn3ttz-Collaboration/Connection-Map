@@ -4,6 +4,9 @@ import type { Web } from "./layout.ts";
 
 /** 다크웹 판 표에서 받는 칸. 표 칸 그대로다(README 「받는 자료」) */
 export const DARK_TABLE_SELECT = "territory_id,island_id,island_name,territory_name,aliases,kind,cells,color,quarter,as_of";
+export const OPEN_TABLE_SELECT = DARK_TABLE_SELECT;
+export const OPEN_INCIDENT_SELECT = "id,platform_id,title,status,published_at,created_at";
+export const OPEN_INCIDENT_TYPES_SELECT = "id,incident_id,name,category,description";
 
 /**
  * 표 줄 목록 → 배치 결과 꼴. 줄마다 분기 · 시각이 붙어 있으니 머리로 올린다.

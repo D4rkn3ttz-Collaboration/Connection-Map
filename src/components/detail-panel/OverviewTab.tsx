@@ -54,7 +54,7 @@ export function OverviewTab({
       </dl>
       <div className={styles.metrics}>
         <button type="button" onClick={() => onTab("events")}>
-          <span>연결된 사건</span>
+          <span>등록된 사건</span>
           <strong>
             {eventCount}
             <small>건</small>
@@ -68,7 +68,7 @@ export function OverviewTab({
           </strong>
         </button>
       </div>
-      <p className={styles.note}>공개 연결 정보에 등록된 기록 기준입니다.</p>
+      <p className={styles.note}>오픈웹 사건 및 공개 연결 기록 기준입니다.</p>
       <h3 className={styles.sectionHeading}>
         {subject.territories.length > 1 ? "포함된 영토" : "선택한 영토"}
       </h3>

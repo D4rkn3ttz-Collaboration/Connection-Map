@@ -110,7 +110,7 @@ export default function Demo() {
 
           <ul className="space-y-0.5 text-xs text-ink-soft">
             {data ? (
-              (["dark", "open", "links"] as const).map((k) => (
+              (["dark", "open", "incidents", "links"] as const).map((k) => (
                 <li key={k} className={data.bad[k] ? "text-accent" : undefined}>
                   {data.status[k]}
                 </li>
@@ -126,6 +126,8 @@ export default function Demo() {
           selected={selected}
           layouts={layouts}
           lines={lines}
+          incidents={data?.incidents}
+          incidentsUnavailable={data?.bad.incidents}
           tab={panel.tab}
           collapsed={panel.collapsed}
           selectedIncidentId={panel.incident?.id ?? null}
