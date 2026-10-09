@@ -12,7 +12,7 @@ import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 
-import { axialToXZ, edgeSegments, plateBounds, type Layout, type Territory, type Web } from "@/lib/layout.ts";
+import { axialToXZ, centerOf, edgeSegments, plateBounds, type Layout, type Territory, type Web } from "@/lib/layout.ts";
 import { focusOf, lineStyle, type LinkLine, type Pick } from "@/lib/links.ts";
 import {
   FOCUS_ZOOM,
@@ -226,6 +226,29 @@ export class SceneView {
     const zoom = Math.max(this.view.zoom, FOCUS_ZOOM);
     // 갈 곳도 묶어 둔다 — 안 묶으면 판 가장자리 영토에서 카메라가 묶임에 걸려 끝없이 다가가려 한다
     this.goal = { angle: focusAngle(at.x, at.z, this.angle), zoom, t: this.clampView({ x: at.x, y: at.y, z: at.z }, zoom) };
+    this.kick();
+    return true;
+  }
+
+  /** 유형에 속한 모든 영토의 가운데로 이동하고, 섬 전체가 보일 만큼 확대한다. */
+  showIsland(web: Web, islandId: string): boolean {
+    const plate = this.plates[web];
+    const island = plate?.layout.islands.find((item) => item.id === islandId);
+    if (!plate || !island?.territories.length) return false;
+    const cells = island.territories.flatMap((territory) => territory.cells);
+    const center = centerOf(cells);
+    const x = center.x - plate.bounds.cx;
+    const z = center.z - plate.bounds.cz;
+    const extent = cells.reduce((radius, [q, r]) => {
+      const point = axialToXZ(q, r);
+      return Math.max(radius, Math.hypot(point.x - center.x, point.z - center.z));
+    }, 0);
+    const zoom = Math.max(1.2, Math.min(FOCUS_ZOOM, this.fit.radius / (extent + 2)));
+    this.goal = {
+      angle: focusAngle(x, z, this.angle),
+      zoom,
+      t: this.clampView({ x, y: plate.group.position.y + H_TOP, z }, zoom),
+    };
     this.kick();
     return true;
   }
