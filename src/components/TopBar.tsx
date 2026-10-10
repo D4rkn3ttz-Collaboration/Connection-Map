@@ -9,7 +9,7 @@ import styles from "./search.module.css";
 const destinations = [
   { label: "오픈웹", href: "https://openweb-map.vercel.app/", dot: "bg-[#3B82F6]" },
   { label: "연결", href: "https://d4rkn3ttz-collaboration.github.io/Connection-Map/", dot: "bg-[#8B5CF6]", current: true },
-  { label: "다크웹", href: "https://darkchoco-map.darkchoco.workers.dev/", dot: "bg-[#E5484D]" },
+  { label: "다크웹", href: "https://map.darkchoco.kr/", dot: "bg-[#E5484D]" },
 ] as const;
 
 function Highlight({ value, query, web }: { value: string; query: string; web: "open" | "dark" }) {
