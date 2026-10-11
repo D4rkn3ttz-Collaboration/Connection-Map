@@ -53,11 +53,6 @@ export function EventsTab({
     from: koreanDate(now, 90),
     to: koreanDate(now),
   });
-  const [limit, setLimit] = useState(() =>
-    revealOnMount && selectedId
-      ? Math.max(5, incidents.findIndex((item) => item.id === selectedId) + 1)
-      : 5,
-  );
   const { popup, popupRef, closeButtonRef, open, close } = useIncidentPopup();
   const selectedRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -82,7 +77,7 @@ export function EventsTab({
     range?.from ?? null,
     range?.to ?? null,
   );
-  const groups = incidentGroups(visible.slice(0, limit));
+  const groups = incidentGroups(visible);
   if (unavailable)
     return (
       <DetailEmptyState
@@ -101,7 +96,7 @@ export function EventsTab({
             : period === "all"
               ? "전체"
               : `${period}일`}{" "}
-          · 최근 {Math.min(limit, visible.length)}건
+          · {visible.length}건
         </span>
       </div>
       <div className={filters.periods} role="group" aria-label="사건 기간">
@@ -113,7 +108,6 @@ export function EventsTab({
             onClick={() => {
               close(false);
               setPeriod(preset.id);
-              setLimit(5);
               setEditingDates(false);
             }}
           >
@@ -149,7 +143,6 @@ export function EventsTab({
                   from: event.target.value,
                 }));
                 setPeriod("custom");
-                setLimit(5);
               }}
             />
           </label>
@@ -166,7 +159,6 @@ export function EventsTab({
                   to: event.target.value,
                 }));
                 setPeriod("custom");
-                setLimit(5);
               }}
             />
           </label>
@@ -231,15 +223,6 @@ export function EventsTab({
               </section>
             ))}
           </div>
-          {limit < visible.length && (
-            <button
-              type="button"
-              className={styles.textButton}
-              onClick={() => setLimit((value) => value + 5)}
-            >
-              사건 더 보기 <span aria-hidden="true">↓</span>
-            </button>
-          )}
         </>
       )}
       {popup && (

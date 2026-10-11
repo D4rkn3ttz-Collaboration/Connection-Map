@@ -28,9 +28,21 @@ export default function Demo() {
   const { selected } = panel;
   const [hover, setHover] = useState<TerritoryRef | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [linkMode, setLinkMode] = useState<"summary" | "full">("full");
   const [angle, setAngle] = useState(START_ANGLE);
   const [query, setQuery] = useState("");
   const scene = useRef<LinkScene3DHandle>(null);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem("connection-map-link-mode") === "summary") queueMicrotask(() => setLinkMode("summary"));
+    } catch { /* 저장소 접근이 막혀도 기본 모드로 계속한다. */ }
+  }, []);
+
+  const chooseLinkMode = (mode: "summary" | "full") => {
+    setLinkMode(mode);
+    try { window.localStorage.setItem("connection-map-link-mode", mode); } catch { /* 세션 동안은 선택을 유지한다. */ }
+  };
 
   useEffect(() => {
     let live = true;
@@ -112,14 +124,25 @@ export default function Demo() {
               onSelect={panel.select}
               onHover={setHover}
               showAllLinks={showAll}
+              linkMode={linkMode}
               angle={angle}
               onAngleChange={setAngle}
             />
 
-            <label className="absolute right-4 top-4 flex cursor-pointer items-center gap-2 rounded-full border border-line bg-white/95 px-3 py-1.5 text-xs">
-              <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="accent-accent" />
-              전체 관계 보기
-            </label>
+            <div className="absolute right-4 top-4 flex items-center gap-2 rounded-full border border-line bg-white/95 p-1 text-xs shadow-sm">
+              <label className="flex cursor-pointer items-center gap-1.5 px-2">
+                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="accent-accent" />
+                관계선
+              </label>
+              <div className="flex rounded-full bg-slate-100 p-0.5" role="group" aria-label="관계선 보기 방식">
+                {(["summary", "full"] as const).map((mode) => (
+                  <button key={mode} type="button" aria-pressed={linkMode === mode} onClick={() => chooseLinkMode(mode)}
+                    className={`rounded-full px-2.5 py-1 ${linkMode === mode ? "bg-white font-semibold text-accent shadow-sm" : "text-ink-soft"}`}>
+                    {mode === "summary" ? "요약 보기" : "전체 보기"}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <p className="absolute bottom-4 left-4 max-w-[calc(100%-2rem)] truncate rounded-full border border-line bg-white/95 px-3 py-1.5 text-xs sm:max-w-[55%]" role="status">
               <span className="mr-1.5 inline-block size-1.5 rounded-full bg-[#3B82F6] align-middle" />

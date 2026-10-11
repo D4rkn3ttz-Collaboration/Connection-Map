@@ -131,7 +131,7 @@ export function lineStyle(confidence: string): { dashed: boolean; dash: number; 
   const r = confidenceRank(confidence);
   if (r === 3) return { dashed: false, dash: 0, gap: 0, faint: false };
   if (r === 2) return { dashed: true, dash: 1.6, gap: 1, faint: false };
-  if (r === 1) return { dashed: true, dash: 0.35, gap: 0.8, faint: false };
+  if (r === 1) return { dashed: true, dash: 0.18, gap: 0.52, faint: false };
   // 신뢰도가 비었거나 모르는 값 — 선은 숨기지 않되 옅고 가늘게 그려 「높음」 실선과 헷갈리지 않게 한다(2026-10-08)
   return { dashed: false, dash: 0, gap: 0, faint: true };
 }
@@ -155,6 +155,32 @@ export interface Strand {
   confidence: string;
   /** 고른 것과 이어진 선. false 면 「전체 관계 보기」 로 함께 그린 나머지라 옅게 · 끝 동그라미 없이 그린다 */
   strong: boolean;
+}
+
+/** 요약 보기: 도착 다크웹 커뮤니티와 신뢰도마다 별도의 선을 만든다. */
+export interface SummaryStrand {
+  islandId: string;
+  confidence: string;
+  rank: number;
+  lines: LinkLine[];
+}
+
+export function summaryStrands(lines: LinkLine[], dark: Layout | null): SummaryStrand[] {
+  const islands = new Map(dark?.territories.map((t) => [t.id, t.island]) ?? []);
+  const groups = new Map<string, SummaryStrand>();
+  for (const line of lines) {
+    const islandId = islands.get(line.darkId);
+    if (!islandId) continue;
+    const rank = confidenceRank(line.confidence);
+    const key = `${islandId}\u0000${rank}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = { islandId, confidence: line.confidence, rank, lines: [] };
+      groups.set(key, group);
+    }
+    group.lines.push(line);
+  }
+  return [...groups.values()];
 }
 
 /**
