@@ -6,7 +6,7 @@ import type { Web } from "./layout.ts";
 export const DARK_TABLE_SELECT = "territory_id,island_id,island_name,territory_name,aliases,kind,cells,color,quarter,as_of";
 export const OPEN_TABLE_SELECT = DARK_TABLE_SELECT;
 export const OPEN_INCIDENT_SELECT = "id,platform_id,title,status,published_at,created_at";
-export const OPEN_INCIDENT_TYPES_SELECT = "id,incident_id,name,category,description";
+export const OPEN_INCIDENT_TYPES_SELECT = "id,incident_id,category,description";
 /** 다크웹 사건 표(public.dark_events)에서 받는 칸 — 분류 값 · 번호뿐이다 */
 export const DARK_EVENTS_SELECT = "event_id,territory_id,actor_territory_id,posted_at,kind,verdict,size,size_value,size_unit,risk,leak_items,industry,country,repost,scam,confirm";
 

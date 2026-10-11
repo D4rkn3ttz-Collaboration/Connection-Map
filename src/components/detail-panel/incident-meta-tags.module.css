@@ -1,0 +1,24 @@
+.status,
+.exposureTag {
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: #eaf0f8;
+  color: #69798d;
+  font-weight: 500;
+}
+
+.pending {
+  background: #fff0df;
+  color: #c36a12;
+}
+
+.complete {
+  background: #e7f7ed;
+  color: #23885a;
+}
+
+.exposureTag {
+  border: 1px solid #d5e2fa;
+  background: #f3f7ff;
+  color: #4472b7;
+}

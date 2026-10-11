@@ -53,11 +53,7 @@ export function parseOpenIncidents(
     seen.add(id);
     const dataTypes = types.get(id) ?? [];
     const descriptions = dataTypes
-      .map((type) => {
-        const detail = text(type.description);
-        const name = text(type.name);
-        return detail ? [name, detail].filter(Boolean).join(": ") : "";
-      })
+      .map((type) => text(type.description))
       .filter(Boolean);
     const reference = `incident-${id}`;
     incidents.push({
@@ -71,7 +67,7 @@ export function parseOpenIncidents(
         ...new Set(dataTypes.map((type) => text(type.category)).filter(Boolean)),
       ],
       status: text(item.status) || undefined,
-      description: descriptions.join("\n") || undefined,
+      description: [...new Set(descriptions)].join("\n\n") || undefined,
       linkIds: [],
     });
   }

@@ -5,6 +5,7 @@ import { detailSubject, subjectIncidents } from "./detail-panel.ts";
 import { parseLayout } from "./layout.ts";
 import { matchLinks } from "./links.ts";
 import { parseOpenIncidents } from "./open-incidents.ts";
+import { OPEN_INCIDENT_TYPES_SELECT } from "./supabase.ts";
 import { DARK } from "./fixtures.mjs";
 
 const open = parseLayout({
@@ -18,6 +19,10 @@ const open = parseLayout({
     color: "#457AFF",
   }],
 }, "open");
+
+test("오픈웹 노출 유형 조회에서 name 열은 가져오지 않는다", () => {
+  assert.equal(OPEN_INCIDENT_TYPES_SELECT, "id,incident_id,category,description");
+});
 
 test("오픈웹 사건을 영토 ID와 연결하고 유형·상태·날짜를 보존한다", () => {
   const incidents = parseOpenIncidents([
@@ -33,7 +38,8 @@ test("오픈웹 사건을 영토 ID와 연결하고 유형·상태·날짜를 �
   assert.equal(incidents[0].status, "검토중");
   assert.equal(incidents[0].observedAt, "2026-10-08T08:00:00Z");
   assert.deepEqual(incidents[0].exposureTypes, ["파일 노출", "계정 정보 노출"]);
-  assert.match(incidents[0].description, /문서: 예시 설명/);
+  assert.equal(incidents[0].description, "예시 설명\n\n다른 설명");
+  assert.doesNotMatch(incidents[0].description, /문서|계정/);
 });
 
 test("오픈웹 원본 사건과 공개 연결의 같은 사건을 한 번만 표시한다", () => {

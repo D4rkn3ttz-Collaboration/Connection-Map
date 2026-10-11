@@ -7,7 +7,10 @@ import {
   incidentsInRange,
   type PanelIncident,
 } from "@/lib/detail-panel.ts";
+import { useIncidentPopup } from "@/hooks/useIncidentPopup";
 import { DetailEmptyState } from "./DetailEmptyState";
+import { IncidentDetailsDialog } from "./IncidentDetailsDialog";
+import { IncidentMetaTags } from "./IncidentMetaTags";
 import styles from "./detail-panel.module.css";
 import filters from "./incident-filters.module.css";
 import timeline from "./event-timeline.module.css";
@@ -55,12 +58,19 @@ export function EventsTab({
       ? Math.max(5, incidents.findIndex((item) => item.id === selectedId) + 1)
       : 5,
   );
+  const { popup, popupRef, closeButtonRef, open, close } = useIncidentPopup();
   const selectedRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!revealOnMount) return;
-    const frame = requestAnimationFrame(() => selectedRef.current?.scrollIntoView({ block: "center" }));
+    const frame = requestAnimationFrame(() => {
+      const trigger = selectedRef.current;
+      const incident = incidents.find((item) => item.id === selectedId);
+      if (!trigger || !incident) return;
+      trigger.scrollIntoView({ block: "center" });
+      open(incident, trigger);
+    });
     return () => cancelAnimationFrame(frame);
-  }, [revealOnMount]);
+  }, [incidents, open, revealOnMount, selectedId]);
   const range =
     period === "all"
       ? null
@@ -73,7 +83,6 @@ export function EventsTab({
     range?.to ?? null,
   );
   const groups = incidentGroups(visible.slice(0, limit));
-  const selected = visible.find((item) => item.id === selectedId);
   if (unavailable)
     return (
       <DetailEmptyState
@@ -102,6 +111,7 @@ export function EventsTab({
             key={preset.id}
             aria-pressed={period === preset.id}
             onClick={() => {
+              close(false);
               setPeriod(preset.id);
               setLimit(5);
               setEditingDates(false);
@@ -133,6 +143,7 @@ export function EventsTab({
               value={customRange.from}
               max={customRange.to}
               onChange={(event) => {
+                close(false);
                 setCustomRange((current) => ({
                   ...current,
                   from: event.target.value,
@@ -149,6 +160,7 @@ export function EventsTab({
               value={customRange.to}
               min={customRange.from}
               onChange={(event) => {
+                close(false);
                 setCustomRange((current) => ({
                   ...current,
                   to: event.target.value,
@@ -185,7 +197,13 @@ export function EventsTab({
                         ref={selectedId === incident.id ? selectedRef : undefined}
                         className={timeline.event}
                         aria-pressed={selectedId === incident.id}
-                        onClick={() => onSelect(incident)}
+                        aria-haspopup="dialog"
+                        aria-expanded={popup?.incident.id === incident.id}
+                        aria-controls={popup?.incident.id === incident.id ? `incident-popup-${incident.id}` : undefined}
+                        onClick={(event) => {
+                          onSelect(incident);
+                          open(incident, event.currentTarget);
+                        }}
                       >
                         <span className={timeline.dot} aria-hidden="true" />
                         <span className={timeline.metadata}>
@@ -193,39 +211,20 @@ export function EventsTab({
                             {dateParts(incident.observedAt)?.short ??
                               "시각 미등록"}
                           </time>
-                          {incident.exposureTypes.map((tag) => (
-                            <span className={timeline.tag} key={tag}>
-                              {tag}
-                            </span>
-                          ))}
-                          {incident.status && (
-                            <span className={timeline.tag}>{incident.status}</span>
-                          )}
+                          <IncidentMetaTags
+                            status={incident.status}
+                            exposureTypes={incident.exposureTypes}
+                          />
                         </span>
                         <strong>
                           {incident.title
                             ? `${incident.reference} · ${incident.title}`
                             : incident.reference}
                         </strong>
-                        <span className={timeline.caption}>
-                          {incident.territoryName}
-                          {incident.linkIds.length > 0 &&
-                            ` · 연결 ${incident.linkIds.length}건`}
-                        </span>
+                        {incident.linkIds.length > 0 && (
+                          <span className={timeline.caption}>연결 {incident.linkIds.length}건</span>
+                        )}
                       </button>
-                      {selected?.id === incident.id && (
-                        <section className={timeline.selected} aria-label="선택한 사건 정보">
-                          <h3>{selected.reference}</h3>
-                          {selected.description && <p>{selected.description}</p>}
-                          {selected.status && <p>상태: {selected.status}</p>}
-                          {!selected.title && <p>공개 정보에는 사건 제목과 설명이 포함되어 있지 않습니다.</p>}
-                          {selected.linkIds.map((id) => (
-                            <button type="button" className={styles.textButton} key={id} onClick={() => onSelectLink(id)}>
-                              {id} 연결 보기 <span aria-hidden="true">→</span>
-                            </button>
-                          ))}
-                        </section>
-                      )}
                     </li>
                   ))}
                 </ol>
@@ -242,6 +241,16 @@ export function EventsTab({
             </button>
           )}
         </>
+      )}
+      {popup && (
+        <IncidentDetailsDialog
+          incident={popup.incident}
+          position={popup.position}
+          popupRef={popupRef}
+          closeButtonRef={closeButtonRef}
+          onClose={close}
+          onSelectLink={onSelectLink}
+        />
       )}
     </>
   );

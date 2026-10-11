@@ -72,6 +72,7 @@ export function DetailPanel(props: DetailPanelProps) {
       </button>
       <aside
         className={styles.panel}
+        data-detail-panel
         id={`${id}-detail`}
         hidden={props.collapsed}
         aria-label={subject ? `${subject.title} 상세 패널` : "상세 패널"}
