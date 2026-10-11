@@ -11,6 +11,7 @@ import * as THREE from "three";
 import { Line2 } from "three/examples/jsm/lines/Line2.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { BLOCK_TOP_RADIUS, createBlockGeometry } from "./block-geometry.ts";
 
 import { axialToXZ, centerOf, edgeSegments, plateBounds, type Layout, type Territory, type Web } from "@/lib/layout.ts";
 import { focusOf, lineStyle, pickedLines, strandsOf, type LinkLine, type Pick, type Strand } from "@/lib/links.ts";
@@ -42,8 +43,6 @@ import {
 const LINK_COLOR = 0xc2400d;
 /** 흐려진 블록이 섞이는 색 — 판 바탕에 가까운 옅은 회청색 (Figma ③-1 「연한 색」) */
 const FADE = new THREE.Color("#E3E7F0");
-/** 블록 반지름 — 칸(1)보다 작게 두어 칸 사이에 틈이 보이게 한다(Figma 블록은 한 칸씩 떨어져 보인다) */
-const BLOCK_R = 0.9;
 /** 알린 회전 각이 React 를 거쳐 돌아오는 데 넉넉히 잡은 시간 */
 const ECHO_MS = 300;
 
@@ -151,10 +150,13 @@ export class SceneView {
     this.events = events;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x7d88a8, 1.7));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x677694, 1.35));
+    const sun = new THREE.DirectionalLight(0xffffff, 2);
     sun.position.set(-60, 160, 90);
     this.scene.add(sun);
+    const fill = new THREE.DirectionalLight(0xbccfff, 0.55);
+    fill.position.set(80, 45, -90);
+    this.scene.add(fill);
     this.scene.add(this.root);
     this.root.add(this.plateGroup, this.linkGroup);
     this.listen();
@@ -332,17 +334,18 @@ export class SceneView {
       byTerritory.set(t.id, own);
     }
 
-    // 뾰족 위 육각 기둥. three 의 원기둥 꼭짓점은 +z 에서 시작해 뾰족한 쪽이 z 축을 향한다 — 2D 와 같다
-    const geo = new THREE.CylinderGeometry(BLOCK_R, BLOCK_R, 1, 6);
-    geo.translate(0, 0.5, 0);
-    const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), cells.length);
+    const mesh = new THREE.InstancedMesh(
+      createBlockGeometry(),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.72, metalness: 0 }),
+      cells.length,
+    );
     mesh.frustumCulled = false;
     group.add(mesh);
 
     // 영토 경계 — 블록 윗면 둘레에 옅은 흰 선(Figma 블록 윗면 테두리). 2D 영토 사이 선과 같은 변이다
     const segs = edgeSegments(layout).map((s) => {
       const c = axialToXZ(s.q, s.r);
-      const k = BLOCK_R;
+      const k = BLOCK_TOP_RADIUS;
       return {
         cell: index.get(`${s.q},${s.r}`) ?? 0,
         a: { x: c.x + (s.a.x - c.x) * k - b.cx, z: c.z + (s.a.z - c.z) * k - b.cz },
@@ -351,7 +354,7 @@ export class SceneView {
     });
     const edgeGeo = new THREE.BufferGeometry();
     edgeGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(segs.length * 6), 3));
-    const edges = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }));
+    const edges = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 }));
     edges.frustumCulled = false;
     group.add(edges);
 
