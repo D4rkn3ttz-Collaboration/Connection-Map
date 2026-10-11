@@ -14,7 +14,7 @@ import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { BLOCK_TOP_RADIUS, createBlockGeometry } from "./block-geometry.ts";
 
 import { axialToXZ, centerOf, edgeSegments, plateBounds, type Layout, type Territory, type Web } from "@/lib/layout.ts";
-import { focusOf, lineStyle, pickedLines, strandsOf, type LinkLine, type Pick, type Strand } from "@/lib/links.ts";
+import { focusOf, lineStyle, pickedLines, strandsOf, summaryStrands, type LinkLine, type Pick } from "@/lib/links.ts";
 import {
   FOCUS_ZOOM,
   FOV_DEG,
@@ -41,6 +41,8 @@ import {
 
 /** 연결선 (설계서 6.5 · Figma) */
 const LINK_COLOR = 0xc2400d;
+/** 마우스를 올린 영토의 블록을 원래 높이보다 조금 들어 올린다. */
+const H_HOVER = 0.45;
 /** 흐려진 블록이 섞이는 색 — 판 바탕에 가까운 옅은 회청색 (Figma ③-1 「연한 색」) */
 const FADE = new THREE.Color("#E3E7F0");
 /** 알린 회전 각이 React 를 거쳐 돌아오는 데 넉넉히 잡은 시간 */
@@ -121,6 +123,7 @@ export class SceneView {
   private lines: LinkLine[] = [];
   private pick: Pick | null = null;
   private showAll = false;
+  private linkMode: "summary" | "full" = "full";
   private fit = { radius: 40, gap: 72 };
 
   private angle = START_ANGLE;
@@ -190,9 +193,10 @@ export class SceneView {
   }
 
   /** 고른 것 · 「전체 관계 보기」 를 그린다 */
-  setFocus(pick: Pick | null, showAll: boolean): void {
+  setFocus(pick: Pick | null, showAll: boolean, mode: "summary" | "full" = "full"): void {
     this.pick = pick;
     this.showAll = showAll;
+    this.linkMode = mode;
     this.applyFocus();
   }
 
@@ -409,19 +413,19 @@ export class SceneView {
   private applyFocus(): void {
     const layouts = { dark: this.plates.dark?.layout ?? null, open: this.plates.open?.layout ?? null };
     const f = focusOf(this.pick, layouts, this.lines, this.showAll);
-    const picked = pickedLines(this.pick, layouts, this.lines, this.showAll);
     for (const web of ["dark", "open"] as const) {
       const p = this.plates[web];
       if (!p) continue;
       const keep = f.keep[web];
       for (const c of p.cells) {
         const on = !keep || keep.has(c.t.id);
-        c.target = on ? c.base : H_FLOOR;
+        const hovered = this.hoverKey === `${web}:${c.t.id}`;
+        c.target = hovered ? c.base + H_HOVER : on ? c.base : H_FLOOR;
         c.want.copy(c.color);
-        if (!on) c.want.lerp(FADE, 0.78);
+        if (!on && !hovered) c.want.lerp(FADE, 0.78);
       }
     }
-    this.drawLinks(strandsOf(f.lines, picked));
+    this.drawLinks();
     this.kick();
   }
 
@@ -441,7 +445,9 @@ export class SceneView {
     for (const o of [...this.linkGroup.children]) {
       const m = o as THREE.Mesh;
       m.geometry?.dispose();
-      (m.material as THREE.Material | undefined)?.dispose();
+      const material = m.material as THREE.Material & { map?: THREE.Texture };
+      if (material?.map && material.map !== this.marker) material.map.dispose();
+      material?.dispose();
     }
     this.linkGroup.clear();
     this.linkMats.length = 0;
@@ -451,32 +457,31 @@ export class SceneView {
    * 연결선 — 오픈웹 판 아래에서 내려와 다크웹 영토 윗면에 닿는 곡선, 아래 끝에 동그라미(설계서 4.4 · Figma ③-3).
    * 같은 영토 쌍은 선 하나(`strandsOf`). 진하지 않은 선(전체 관계 보기에서 고른 것 밖)은 옅고 가늘게, 동그라미 없이
    */
-  private drawLinks(strands: Strand[]): void {
+  private drawLinks(): void {
     this.clearLinks();
     const dark = this.plates.dark;
     const open = this.plates.open;
-    if (!dark || !open) return;
+    if (!dark || !open || !this.showAll) return;
     const w = this.renderer.domElement.width / this.renderer.getPixelRatio();
     const h = this.renderer.domElement.height / this.renderer.getPixelRatio();
-    for (const l of strands) {
-      const d = this.anchor(dark, l.darkId, "top", true);
-      const o = this.anchor(open, l.openId, "bottom");
-      if (!d || !o) continue;
-      const from = new THREE.Vector3(o.x, o.y, o.z);
-      const to = new THREE.Vector3(d.x, d.y + 0.05, d.z);
+    const hovered = this.hoverKey ? this.hoverKey.split(":") : null;
+    const picked = hovered
+      ? this.lines.filter((l) => hovered[0] === "dark" ? l.darkId === hovered[1] : l.openId === hovered[1])
+      : pickedLines(this.pick, { dark: dark.layout, open: open.layout }, this.lines, true);
+    const active = picked ? new Set(picked.map((l) => l.id)) : null;
+    const draw = (from: THREE.Vector3, to: THREE.Vector3, confidence: string, strong: boolean, offset: number, count = 0) => {
       const mid = new THREE.Vector3().lerpVectors(from, to, 0.5);
-      // 살짝 바깥으로 휘게 — 곧은 선이 두 판의 블록을 가로지르지 않게
       const out = new THREE.Vector3(mid.x, 0, mid.z);
       if (out.lengthSq() > 1e-6) mid.add(out.normalize().multiplyScalar(this.fit.radius * 0.08));
+      mid.x += offset;
       const pts = new THREE.CatmullRomCurve3([from, mid, to]).getPoints(40);
       const geo = new LineGeometry();
       geo.setPositions(pts.flatMap((p) => [p.x, p.y, p.z]));
-      const st = lineStyle(l.confidence);
-      // 진한 선 1, 신뢰도가 빈 선 0.45, 고른 것 밖의 선 0.3
-      const alpha = !l.strong ? 0.3 : st.faint ? 0.45 : 1;
+      const st = lineStyle(confidence);
+      const alpha = !strong ? 0.19 : st.faint ? 0.45 : 1;
       const mat = new LineMaterial({
         color: LINK_COLOR,
-        linewidth: st.faint || !l.strong ? 1.2 : 2.5,
+        linewidth: st.faint || !strong ? 1.2 : 2.5,
         dashed: st.dashed,
         dashSize: st.dash,
         gapSize: st.gap,
@@ -488,12 +493,57 @@ export class SceneView {
       line.computeLineDistances();
       this.linkMats.push(mat);
       this.linkGroup.add(line);
-      if (!l.strong) continue;
-      // 동그라미도 선과 같은 세기로 — 신뢰도가 빈 선은 옅게
-      const dot = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.marker, depthTest: false, transparent: true, opacity: alpha }));
+      if (count) {
+        const canvas = document.createElement("canvas");
+        canvas.width = 160; canvas.height = 64;
+        const context = canvas.getContext("2d")!;
+        context.fillStyle = "#ffffff";
+        context.strokeStyle = "#c2400d";
+        context.lineWidth = 3;
+        context.beginPath(); context.roundRect(4, 4, 152, 56, 26); context.fill(); context.stroke();
+        context.fillStyle = "#8c2f0c";
+        context.font = "bold 30px sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(`${count}개`, 80, 34);
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const badge = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true, opacity: strong ? 1 : 0.45 }));
+        badge.position.copy(mid);
+        badge.scale.set(7, 2.8, 1);
+        this.linkGroup.add(badge);
+      }
+      const dot = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: this.marker, depthTest: false, transparent: true,
+        opacity: this.linkMode === "full" ? 1 : alpha,
+      }));
       dot.position.copy(to);
       dot.scale.setScalar(1.6);
       this.linkGroup.add(dot);
+    };
+    if (this.linkMode === "summary") {
+      const groups = summaryStrands(this.lines, dark.layout);
+      for (const group of groups) {
+        const froms = group.lines.map((l) => this.anchor(open, l.openId, "bottom")).filter((p): p is P3 => !!p);
+        const tos = group.lines.map((l) => this.anchor(dark, l.darkId, "top", true)).filter((p): p is P3 => !!p);
+        if (!froms.length || !tos.length) continue;
+        const mean = (points: P3[]) => new THREE.Vector3(
+          points.reduce((n, p) => n + p.x, 0) / points.length,
+          points.reduce((n, p) => n + p.y, 0) / points.length,
+          points.reduce((n, p) => n + p.z, 0) / points.length,
+        );
+        const siblings = groups.filter((g) => g.islandId === group.islandId);
+        const offset = (siblings.indexOf(group) - (siblings.length - 1) / 2) * 4;
+        draw(mean(froms), mean(tos), group.confidence, !active || group.lines.some((l) => active.has(l.id)), offset, group.lines.length);
+      }
+    } else {
+      for (const strand of strandsOf(this.lines, picked ?? [])) {
+        const d = this.anchor(dark, strand.darkId, "top", true);
+        const o = this.anchor(open, strand.openId, "bottom");
+        if (!d || !o) continue;
+        draw(new THREE.Vector3(o.x, o.y, o.z), new THREE.Vector3(d.x, d.y + 0.05, d.z), strand.confidence,
+          strand.strong, 0);
+      }
     }
   }
 
@@ -678,6 +728,7 @@ export class SceneView {
     this.hoverKey = key;
     this.canvas.style.cursor = t ? "pointer" : "grab";
     this.events.onHover(t);
+    this.applyFocus();
   }
 
   private listen(): void {

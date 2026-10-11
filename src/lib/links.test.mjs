@@ -4,7 +4,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseLayout } from './layout.ts';
-import { LINKS_VIEW_SELECT, confidenceRank, focusOf, lineStyle, linksMissing, linksOf, matchLinks, pickedLines, strandsOf } from './links.ts';
+import { LINKS_VIEW_SELECT, confidenceRank, focusOf, lineStyle, linksMissing, linksOf, matchLinks, pickedLines, strandsOf, summaryStrands } from './links.ts';
+
+test('요약선은 도착 커뮤니티와 신뢰도별로 나뉘고 연결 수를 보존한다', () => {
+  const dark = { territories: [
+    { id: 'd1', island: 'red' }, { id: 'd2', island: 'red' }, { id: 'd3', island: 'purple' },
+  ] };
+  const make = (id, darkId, confidence) => ({ id, darkId, openId: 'o1', confidence, relType: '' });
+  const groups = summaryStrands([
+    make('1', 'd1', '상'), make('2', 'd2', '상'), make('3', 'd2', '하'),
+    make('4', 'd3', '상'), make('5', 'd3', '중'),
+  ], dark);
+  assert.deepEqual(groups.map((g) => [g.islandId, g.rank, g.lines.length]),
+    [['red', 3, 2], ['red', 1, 1], ['purple', 3, 1], ['purple', 2, 1]]);
+  assert.equal(groups.reduce((n, g) => n + g.lines.length, 0), 5);
+  assert.ok(lineStyle('하').dash < lineStyle('중').dash);
+  assert.ok(lineStyle('하').gap > lineStyle('하').dash);
+});
 import { DARK, OPEN } from './fixtures.mjs';
 
 test('7. 연결 줄은 영토 번호나 이름으로 잇고, 한쪽이라도 없으면 버린다', () => {

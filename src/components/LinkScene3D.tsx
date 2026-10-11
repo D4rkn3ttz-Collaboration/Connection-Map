@@ -36,6 +36,7 @@ export interface LinkScene3DProps {
   onHover?(t: TerritoryRef | null): void;
   /** 「전체 관계 보기」 — 고른 것과 상관없이 연결선을 모두 그린다. 고른 것이 있으면 그것과 이어진 선만 진하다 */
   showAllLinks?: boolean;
+  linkMode?: "summary" | "full";
   /** 회전 각(0 ~ 360, 처음 160). 주지 않으면 장면이 혼자 들고 있다 */
   angle?: number;
   /** 끌기 · show() 로 회전 각이 바뀌었다(정수 도) */
@@ -48,7 +49,7 @@ export interface LinkScene3DProps {
 const BACKGROUND = "linear-gradient(180deg, #FFFFFF 0%, #F2F5FB 35%, #C5CDE3 62%, #6C7CA8 84%, #34426E 100%)";
 
 export default function LinkScene3D(props: LinkScene3DProps) {
-  const { dark, open, lines, selected, showAllLinks = false, angle, className, ref } = props;
+  const { dark, open, lines, selected, showAllLinks = false, linkMode = "full", angle, className, ref } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewRef = useRef<SceneView | null>(null);
   const [failed, setFailed] = useState(false);
@@ -80,7 +81,7 @@ export default function LinkScene3D(props: LinkScene3DProps) {
     viewRef.current = view;
     const d = latest.current;
     view.setData(d.dark, d.open, d.lines);
-    view.setFocus(d.selected, d.showAllLinks ?? false);
+    view.setFocus(d.selected, d.showAllLinks ?? false, d.linkMode ?? "full");
     if (d.angle != null) view.setAngle(d.angle);
     const onResize = () => view.resize();
     // 미리보기 창처럼 ResizeObserver 가 안 도는 곳도 있어 창 크기 바뀜도 같이 듣는다
@@ -110,8 +111,8 @@ export default function LinkScene3D(props: LinkScene3DProps) {
   }, [dark, open, lines]);
 
   useEffect(() => {
-    viewRef.current?.setFocus(selected, showAllLinks);
-  }, [selected, showAllLinks, dark, open, lines]);
+    viewRef.current?.setFocus(selected, showAllLinks, linkMode);
+  }, [selected, showAllLinks, linkMode, dark, open, lines]);
 
   useEffect(() => {
     if (angle != null) viewRef.current?.setAngle(angle);

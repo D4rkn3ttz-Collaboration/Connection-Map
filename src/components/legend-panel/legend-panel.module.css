@@ -120,7 +120,9 @@
 }
 
 .dottedLine {
-  border-top-style: dotted;
+  border-top: 0;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, #708098 0 2px, transparent 2px 5px);
 }
 
 .guide p {
