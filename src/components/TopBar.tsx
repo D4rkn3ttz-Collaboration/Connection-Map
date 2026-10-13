@@ -10,7 +10,7 @@ import topBar from "./top-bar.module.css";
 const destinations = [
   { label: "오픈웹", href: "https://openweb-map.vercel.app/", color: "#176bfa" },
   { label: "연결", href: "https://d4rkn3ttz-collaboration.github.io/Connection-Map/", color: "#8053e9", current: true },
-  { label: "다크웹", href: "https://darkchoco-map.darkchoco.workers.dev/", color: "#df2f4b" },
+  { label: "다크웹", href: "https://map.darkchoco.kr/", color: "#df2f4b" },
 ] as const;
 
 function Highlight({ value, query, web }: { value: string; query: string; web: "open" | "dark" }) {
