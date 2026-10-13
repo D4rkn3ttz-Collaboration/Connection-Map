@@ -71,7 +71,8 @@ export function parseDarkIncidents(eventRows: unknown, layout: Layout): PanelInc
       description: parts.join(" · ") || undefined,
       linkIds: [] as string[],
     };
-    // 게시처 영토, 그리고 행위자 영토(있으면) — 2D 와 같이 두 곳에서 센다
+    // 게시처 영토, 그리고 행위자 영토(있으면) — 2D 와 같이 두 곳에서 센다.
+    // 연결 줄은 게시처 영토에만 붙으므로 행위자 쪽 사건에는 게시처를 적어 둔다(패널이 「연결은 게시처 영토에」 를 안내하게)
     const actor = territories.get(text(row.actor_territory_id, 80));
     for (const t of actor && actor.id !== home.id ? [home, actor] : [home]) {
       out.push({
@@ -79,6 +80,7 @@ export function parseDarkIncidents(eventRows: unknown, layout: Layout): PanelInc
         id: `dark:${t.id}:${reference}`,
         territory: { web: "dark", territory_id: t.id },
         territoryName: t.name,
+        ...(t.id !== home.id && { postedIn: { territory_id: home.id, name: home.name } }),
       });
     }
   }

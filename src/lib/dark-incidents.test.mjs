@@ -40,6 +40,11 @@ test('21. 다크웹 사건 표 → 패널 사건 — 제목은 사건 종류, �
   assert.equal(a.description, '규모 큼(3.5GB) · 위험도 높음 · 산업 교육');
   assert.equal(a.observedAt, '2026-09-01T00:00:00+09:00', '날짜만 온 값은 한국 시각 0시');
   assert.equal(actor.territoryName, 'xhandle');
+  assert.deepEqual(actor.postedIn, { territory_id: 'forum-a', name: 'Alpha Forum' }, '행위자 쪽 사건은 게시처를 안다');
+  assert.ok(!('postedIn' in a) && !('postedIn' in b), '게시처 쪽 사건에는 칸이 없다');
+  const same = parseDarkIncidents([row({ actor_territory_id: 'forum-a' })], dark);
+  assert.equal(same.length, 1, '행위자가 게시처와 같으면 한 번만');
+  assert.ok(!('postedIn' in same[0]));
   assert.equal(b.title, '다크웹 게시', '종류가 없으면');
   assert.equal(b.status, '검증 전');
   assert.equal(b.observedAt, '2026-09-02T10:00:00+00:00');

@@ -18,6 +18,8 @@ export interface PanelIncident {
   status?: string;
   description?: string;
   linkIds: string[];
+  /** 행위자 영토에 함께 실린 다크웹 사건이면 그 사건의 게시처 영토. 연결 줄은 게시처 영토에만 붙는다 */
+  postedIn?: { territory_id: string; name: string };
 }
 
 export interface DetailSubject {

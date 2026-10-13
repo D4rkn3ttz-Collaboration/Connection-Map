@@ -23,8 +23,8 @@ export interface SceneData {
   incidents: PanelIncident[];
   /** 사람이 읽는 상태 글 — 판마다 어디서 몇 곳을 받았는지, 못 받았으면 까닭 */
   status: { dark: string; open: string; incidents: string; links: string };
-  /** 진짜 오류가 난 판(빨갛게 보일 것) */
-  bad: { dark: boolean; open: boolean; incidents: boolean; links: boolean };
+  /** 진짜 오류가 난 판(빨갛게 보일 것). darkEvents — 다크웹 사건 표(dark_events)를 못 읽었다(표가 아직 없는 404 는 실패가 아니다) */
+  bad: { dark: boolean; open: boolean; incidents: boolean; links: boolean; darkEvents: boolean };
 }
 
 async function getJson(url: string): Promise<unknown> {
@@ -66,7 +66,7 @@ export async function loadSceneData(params: URLSearchParams): Promise<SceneData>
     lines: [],
     incidents: [],
     status: { dark: "", open: "", incidents: "", links: "" },
-    bad: { dark: false, open: false, incidents: false, links: false },
+    bad: { dark: false, open: false, incidents: false, links: false, darkEvents: false },
   };
   let cfg: SupabaseConfig | null = null;
   let cfgErr = "";
@@ -133,7 +133,9 @@ export async function loadSceneData(params: URLSearchParams): Promise<SceneData>
       out.status.incidents += ` · 다크웹 사건 ${new Set(dark.map((i) => i.reference)).size}건`;
     } catch (e) {
       const msg = (e as Error).message;
-      out.status.incidents += /HTTP 404/.test(msg) ? " · 다크웹 사건 표는 아직 없다" : ` · 다크웹 사건을 못 읽었다 (${msg})`;
+      const missing = /HTTP 404/.test(msg);
+      out.status.incidents += missing ? " · 다크웹 사건 표는 아직 없다" : ` · 다크웹 사건을 못 읽었다 (${msg})`;
+      out.bad.darkEvents = !missing;
     }
   }
 
