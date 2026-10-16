@@ -243,6 +243,7 @@ type Pick =
   바꾼 뒤에도 새 배포가 나갈 때까지는 옛 화면이 그대로 열린다)
 - PR 에서는 시험 · lint · 빌드만 돌고 올리지 않는다
 - **배포 화면에는 CSP 를 meta 로 넣는다**(`src/lib/csp.ts` · `src/app/layout.tsx`, 2026-10-16). Pages 는 응답 머리글을 못 붙인다. `connect-src` 는 이 출처와 통합 Supabase(`data/supabase.json` 의 프로젝트) 하나, `object-src` · `base-uri` · `form-action` 은 `'none'`. `script-src` 는 Next 인라인 스크립트(`__next_f`) 때문에 `'unsafe-inline'` 이다 — 빌드 뒤 HTML 의 meta 만 해시로 바꾸면 같은 쪽 RSC 자료 속 meta 값과 어긋난다. meta 로는 `frame-ancestors` 를 못 건다. 개발 모드에는 넣지 않는다(React 새로고침이 eval 을 쓴다)
+- 빌드 후 `scripts/security-headers.mjs` 가 CSP 메타를 스크립트보다 앞에 배치하고 `Referrer-Policy: no-referrer` 에 해당하는 메타를 추가한다. `out/_headers` 에는 CSP(`frame-ancestors 'none'` 포함), `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` 를 생성한다. 이 파일은 Netlify 또는 Cloudflare Pages에 `out`을 배포할 때 적용된다. **GitHub Pages는 `_headers`를 읽지 않으므로 현재 github.io 주소의 네 응답 헤더 지적 사항은 호스팅을 변경하거나 헤더를 설정할 수 있는 프록시를 앞에 두기 전까지 해소되지 않는다.** 클릭재킹 방어와 `nosniff`는 HTML 메타 태그로 대체할 수 없다.
 
 ## 협업 규칙 (D4rkn3ttz-Collaboration)
 
