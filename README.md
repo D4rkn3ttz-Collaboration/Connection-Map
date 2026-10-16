@@ -30,6 +30,8 @@ npm run lint
 | `?open=<주소>` | 오픈웹 배치 결과 파일(같은 칸 꼴) | 통합 Supabase 표 `public.open_layout` |
 | `?links=<주소>` | 연결 줄 목록 파일(JSON 배열) | 통합 Supabase 공개 뷰 `links_public`. 뷰가 없거나 공개 읽기가 안 열렸거나 공개 뷰에 나오는 줄이 없으면 연결선 없이 그리고 「연결 자료 없음 — 까닭」 |
 
+**세 인자는 개발 모드(`npm run dev`)에서만 받는다** — 배포 빌드는 무시하고 통합 Supabase 만 읽는다(`src/lib/sources.ts`, 2026-10-16). 남이 만든 링크(배포 주소 + `?open=<남의 파일>`)로 우리 주소 화면에 가짜 영토 · 연결선을 띄우지 못하게 한다
+
 ## 3D 컴포넌트 — 닥스훈트 화면이 얹을 자리
 
 3D 장면은 `src/components/LinkScene3D.tsx` 하나다. 감싸는 화면이 자료를 한 번 받아 넘기고, **「지금 무엇을 골랐나」 를 들고 있다.**
@@ -137,7 +139,7 @@ type Pick =
 | `src/lib/links.ts` | 연결 줄 맞추기(`matchLinks`) · 고른 것 → 지킬 영토와 그릴 선(`focusOf`) · 같은 영토 쌍 합치기 · 진한 선 가르기(`strandsOf`) · 선 꼴 · 공개 뷰 「자료 없음」 가르기 |
 | `src/lib/scene.ts` | 층 높이 · 카메라 맞춤 · 확대 · 바라보는 점 묶기 · 앞으로 돌리는 각 · 선 끝 칸(`nearestToMean`) |
 | `src/lib/supabase.ts` · `load.ts` | 통합 Supabase 받는 칸 · 표 줄 → 배치 결과 · 설정 파일 · 자료 받기 |
-| `src/lib/*.test.mjs` | 계산 · 선택 · 상세 패널 · 범례 · 검색 · 자료 읽기 시험 38개 |
+| `src/lib/*.test.mjs` | 계산 · 선택 · 상세 패널 · 범례 · 검색 · 자료 읽기 · 보안 시험 42개 |
 | `src/components/scene3d/SceneView.ts` | three.js 장면 — 그리기 · 움직이기 · 누르기만 |
 | `src/components/LinkScene3D.tsx` | 장면을 감싼 React 컴포넌트(손잡이) |
 | `.github/workflows/pages.yml` | PR 에서 시험 · lint · 빌드, main 에서는 Pages 배포까지 |
@@ -173,7 +175,7 @@ type Pick =
 ### 오픈웹 판
 
 기본값은 통합 Supabase의 `public.open_layout`이다. `dark_layout`과 같은 칸 꼴을 읽어 영토 번호·이름·섬·색·칸 위치를 그린다.
-`?open=`으로 배치 결과 파일을 지정할 수도 있다. 같은 프로젝트의 `public.incidents`와 `public.incidents_data_types`를 공개 열쇠로 읽어
+개발 모드에서는 `?open=`으로 배치 결과 파일을 지정할 수도 있다. 같은 프로젝트의 `public.incidents`와 `public.incidents_data_types`를 공개 열쇠로 읽어
 `incidents.platform_id`를 `open_layout.territory_id`의 `platform-<번호>`에 맞춘다. 사건 탭에는 제목·게시일(없으면 등록일)·상태와
 노출 유형·설명을 표시한다. 500줄씩 나누어 읽으며, 사건 조회가 실패해도 영토는 그대로 그린다.
 
@@ -240,6 +242,7 @@ type Pick =
 - 저장소 Settings → Pages 의 원천이 **「GitHub Actions」** 여야 한다(2026-10-07 바꿨다 — 옛 시제품은 「main · 루트」 였다.
   바꾼 뒤에도 새 배포가 나갈 때까지는 옛 화면이 그대로 열린다)
 - PR 에서는 시험 · lint · 빌드만 돌고 올리지 않는다
+- **배포 화면에는 CSP 를 meta 로 넣는다**(`src/lib/csp.ts` · `src/app/layout.tsx`, 2026-10-16). Pages 는 응답 머리글을 못 붙인다. `connect-src` 는 이 출처와 통합 Supabase(`data/supabase.json` 의 프로젝트) 하나, `object-src` · `base-uri` · `form-action` 은 `'none'`. `script-src` 는 Next 인라인 스크립트(`__next_f`) 때문에 `'unsafe-inline'` 이다 — 빌드 뒤 HTML 의 meta 만 해시로 바꾸면 같은 쪽 RSC 자료 속 meta 값과 어긋난다. meta 로는 `frame-ancestors` 를 못 건다. 개발 모드에는 넣지 않는다(React 새로고침이 eval 을 쓴다)
 
 ## 협업 규칙 (D4rkn3ttz-Collaboration)
 
