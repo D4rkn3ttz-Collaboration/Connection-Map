@@ -5,6 +5,7 @@
 //                   사건은 public.incidents · incidents_data_types 에서 읽는다
 //   ?links=<주소>   연결 줄 목록(JSON 배열). 없으면(또는 supabase) 통합 Supabase 공개 뷰 links_public.
 //                   뷰가 없거나 공개 읽기가 안 열렸으면 연결선 없이 그리고 「연결 자료 없음」 까닭을 낸다
+//   세 인자는 개발 모드(`npm run dev`)에서만 받는다. 배포 빌드는 무시하고 통합 Supabase 만 읽는다(sources.ts, 2026-10-16)
 //
 // 받은 글자는 화면에 글자로만 넣는다. innerHTML 에 자료를 넣지 않는다.
 
@@ -13,6 +14,7 @@ import { parseLayout, type Layout } from "./layout.ts";
 import { LINKS_VIEW_SELECT, linksMissing, matchLinks, type LinkLine } from "./links.ts";
 import { parseDarkIncidents } from "./dark-incidents.ts";
 import { parseOpenIncidents } from "./open-incidents.ts";
+import { FILE_PARAMS_ALLOWED, fileSources } from "./sources.ts";
 import type { PanelIncident } from "./detail-panel.ts";
 import { DARK_EVENTS_SELECT, DARK_TABLE_SELECT, OPEN_INCIDENT_SELECT, OPEN_INCIDENT_TYPES_SELECT, OPEN_TABLE_SELECT, parseSupabaseConfig, rowsToLayout, type SupabaseConfig } from "./supabase.ts";
 
@@ -53,13 +55,8 @@ async function getTableRows(cfg: SupabaseConfig, table: string, columns: string,
 
 const when = (s: string | null) => (s ? s.replace("T", " ").slice(0, 16) : "?");
 
-export async function loadSceneData(params: URLSearchParams): Promise<SceneData> {
-  // 옛 시제품 주소의 ?dark=supabase · ?links=supabase 는 「통합 DB 에서」 라는 뜻이었다 — 같게 받는다
-  const file = (k: string) => {
-    const v = params.get(k);
-    return v && v !== "supabase" ? v : null;
-  };
-  const src = { dark: file("dark"), open: file("open"), links: file("links") };
+export async function loadSceneData(params: URLSearchParams, allowFiles = FILE_PARAMS_ALLOWED): Promise<SceneData> {
+  const src = fileSources(params, allowFiles);
   const out: SceneData = {
     dark: null,
     open: null,
