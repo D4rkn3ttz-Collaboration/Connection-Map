@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3004",
     "build": "next build",
+    "postbuild": "node --experimental-strip-types scripts/security-headers.mjs",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test src/lib/*.test.mjs"
