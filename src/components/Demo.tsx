@@ -164,58 +164,59 @@ export default function Demo() {
               onAngleChange={setAngle}
             />
 
-            <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-line bg-white/95 p-1 text-xs shadow-sm max-[700px]:top-[4.5rem]">
-              <label className="flex cursor-pointer items-center gap-1.5 px-2">
-                <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="accent-accent" />
-                관계선
-              </label>
-              <div className="flex rounded-full bg-slate-100 p-0.5" role="group" aria-label="관계선 보기 방식">
-                {(["summary", "full"] as const).map((mode) => (
-                  <button key={mode} type="button" aria-pressed={linkMode === mode} onClick={() => chooseLinkMode(mode)}
-                    className={`rounded-full px-2.5 py-1 ${linkMode === mode ? "bg-white font-semibold text-accent shadow-sm" : "text-ink-soft"}`}>
-                    {mode === "summary" ? "요약 보기" : "전체 보기"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="absolute left-4 top-4 z-20 flex items-start gap-2 text-xs">
+            <div className="absolute inset-x-4 top-4 z-20 flex items-start gap-2 text-xs max-[700px]:inset-x-2 max-[700px]:gap-1.5">
               <LegendToggle open={legendOpen} onToggle={() => setLegendOpen((open) => !open)} />
-              <div className="relative">
-              <button type="button" aria-label={filterOpen ? "연결선 필터 접기" : "연결선 필터 펼치기"}
-                aria-expanded={filterOpen} aria-controls="link-filters" title="연결선 필터"
-                onClick={() => setFilterOpen((open) => !open)}
-                className="flex size-10 items-center justify-center rounded-xl border border-line bg-white/95 text-ink shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                  <path d="M4 6h16M7 12h10M10 18h4" />
-                </svg>
-              </button>
-              <div id="link-filters" inert={!filterOpen} aria-hidden={!filterOpen}
-                className={`absolute left-0 top-12 grid w-52 origin-top transition-[grid-template-rows,opacity,transform] duration-300 ease-out motion-reduce:transition-none max-[700px]:top-28 ${filterOpen ? "grid-rows-[1fr] translate-y-0 opacity-100" : "pointer-events-none grid-rows-[0fr] -translate-y-2 opacity-0"}`}>
-                <div className="min-h-0 overflow-hidden">
-                  <div className="max-h-[min(50vh,300px)] overflow-y-auto rounded-xl border border-line bg-white/95 p-3 shadow-sm">
-                  <fieldset className="space-y-1.5">
-                    <legend className="mb-2 font-semibold">신뢰도</legend>
-                    {confidenceOptions.map((rank) => (
-                      <label key={rank} className="flex cursor-pointer items-center gap-2">
-                        <input type="checkbox" checked={!excludedConfidences.has(rank)} onChange={() => toggleConfidence(rank)} className="accent-accent" />
-                        {rank === 0 ? "미등록" : confidenceLabel(rank === 3 ? "상" : rank === 2 ? "중" : "하")}
-                      </label>
-                    ))}
-                  </fieldset>
-                  <fieldset className="mt-3 space-y-1.5 border-t border-line pt-3">
-                    <legend className="font-semibold">연결 유형</legend>
-                    {relationOptions.map((type) => (
-                      <label key={type} className="flex cursor-pointer items-center gap-2">
-                        <input type="checkbox" checked={!excludedRelations.has(type)} onChange={() => toggleRelation(type)} className="accent-accent" />
-                        {relationLabel(type)}
-                      </label>
-                    ))}
-                  </fieldset>
-                  {!allLines.length && <p className="text-ink-soft">표시할 연결 자료가 없습니다.</p>}
+              <div className="relative shrink-0">
+                <button type="button" aria-label={filterOpen ? "연결선 필터 접기" : "연결선 필터 펼치기"}
+                  aria-expanded={filterOpen} aria-controls="link-filters" title="연결선 필터"
+                  onClick={() => setFilterOpen((open) => !open)}
+                  className="flex size-10 items-center justify-center rounded-xl border border-line bg-white/95 text-ink shadow-sm transition-colors hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                    <path d="M4 6h16M7 12h10M10 18h4" />
+                  </svg>
+                </button>
+                <div id="link-filters" inert={!filterOpen} aria-hidden={!filterOpen}
+                  className={`absolute left-0 top-12 grid w-52 origin-top transition-[grid-template-rows,opacity,transform] duration-300 ease-out motion-reduce:transition-none ${filterOpen ? "grid-rows-[1fr] translate-y-0 opacity-100" : "pointer-events-none grid-rows-[0fr] -translate-y-2 opacity-0"}`}>
+                  <div className="min-h-0 overflow-hidden">
+                    <div className="max-h-[min(50vh,300px)] overflow-y-auto rounded-xl border border-line bg-white/95 p-3 shadow-sm">
+                      <fieldset className="space-y-1.5">
+                        <legend className="mb-2 font-semibold">신뢰도</legend>
+                        {confidenceOptions.map((rank) => (
+                          <label key={rank} className="flex cursor-pointer items-center gap-2">
+                            <input type="checkbox" checked={!excludedConfidences.has(rank)} onChange={() => toggleConfidence(rank)} className="accent-accent" />
+                            {rank === 0 ? "미등록" : confidenceLabel(rank === 3 ? "상" : rank === 2 ? "중" : "하")}
+                          </label>
+                        ))}
+                      </fieldset>
+                      <fieldset className="mt-3 space-y-1.5 border-t border-line pt-3">
+                        <legend className="font-semibold">연결 유형</legend>
+                        {relationOptions.map((type) => (
+                          <label key={type} className="flex cursor-pointer items-center gap-2">
+                            <input type="checkbox" checked={!excludedRelations.has(type)} onChange={() => toggleRelation(type)} className="accent-accent" />
+                            {relationLabel(type)}
+                          </label>
+                        ))}
+                      </fieldset>
+                      {!allLines.length && <p className="text-ink-soft">표시할 연결 자료가 없습니다.</p>}
+                    </div>
                   </div>
                 </div>
               </div>
+              <div className="ml-auto flex shrink-0 items-center gap-2 rounded-full border border-line bg-white/95 p-1 text-xs shadow-sm max-[700px]:gap-1 max-[700px]:p-0.5">
+                <label className="flex cursor-pointer items-center gap-1.5 px-2 max-[700px]:gap-1 max-[700px]:px-1">
+                  <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="accent-accent" />
+                  관계선
+                </label>
+                <div className="flex rounded-full bg-slate-100 p-0.5" role="group" aria-label="관계선 보기 방식">
+                  {(["summary", "full"] as const).map((mode) => (
+                    <button key={mode} type="button" aria-label={mode === "summary" ? "요약 보기" : "전체 보기"}
+                      aria-pressed={linkMode === mode} onClick={() => chooseLinkMode(mode)}
+                      className={`rounded-full px-2.5 py-1 max-[700px]:px-1.5 ${linkMode === mode ? "bg-white font-semibold text-accent shadow-sm" : "text-ink-soft"}`}>
+                      <span className="max-[700px]:hidden">{mode === "summary" ? "요약 보기" : "전체 보기"}</span>
+                      <span className="hidden max-[700px]:inline" aria-hidden="true">{mode === "summary" ? "요약" : "전체"}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
