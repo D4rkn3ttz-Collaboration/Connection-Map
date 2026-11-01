@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import LinkScene3D, { type LinkScene3DHandle, type TerritoryRef } from "@/components/LinkScene3D";
 import TopBar from "@/components/TopBar";
 import { DetailPanel } from "@/components/detail-panel/DetailPanel";
-import { LegendPanel } from "@/components/legend-panel/LegendPanel";
+import { LegendPanel, LegendToggle } from "@/components/legend-panel/LegendPanel";
 import { useDetailPanel } from "@/hooks/useDetailPanel";
 import { confidenceLabel, relationLabel } from "@/lib/detail-panel.ts";
 import type { Layout } from "@/lib/layout.ts";
@@ -31,6 +31,7 @@ export default function Demo() {
   const [showAll, setShowAll] = useState(false);
   const [linkMode, setLinkMode] = useState<"summary" | "full">("full");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
   const [excludedConfidences, setExcludedConfidences] = useState<Set<number>>(() => new Set());
   const [excludedRelations, setExcludedRelations] = useState<Set<string>>(() => new Set());
   const [angle, setAngle] = useState(START_ANGLE);
@@ -139,7 +140,7 @@ export default function Demo() {
       <TopBar query={query} onQueryChange={setQuery} hits={hits} onChoose={chooseSearch} />
 
       <div className="relative flex min-h-0 flex-1">
-        <LegendPanel openLayout={layouts.open} darkLayout={layouts.dark} />
+        <LegendPanel openLayout={layouts.open} darkLayout={layouts.dark} mobileOpen={legendOpen} onMobileOpenChange={setLegendOpen} />
 
         <section className="flex min-w-0 flex-1 flex-col gap-3 p-4 sm:p-5" aria-label="연결 생태계 지도">
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -147,7 +148,7 @@ export default function Demo() {
             <p className="text-sm text-ink-soft">오픈웹 · 다크웹 플랫폼과 연결 정보</p>
           </div>
 
-          <div className="relative min-h-[420px] flex-1 overflow-hidden rounded-2xl border border-line bg-white">
+          <div className="relative isolate min-h-[420px] flex-1 overflow-hidden rounded-2xl border border-line bg-white">
             <LinkScene3D
               ref={scene}
               className="absolute inset-0"
@@ -163,7 +164,7 @@ export default function Demo() {
               onAngleChange={setAngle}
             />
 
-            <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-line bg-white/95 p-1 text-xs shadow-sm">
+            <div className="absolute right-4 top-4 z-10 flex items-center gap-2 rounded-full border border-line bg-white/95 p-1 text-xs shadow-sm max-[700px]:top-[4.5rem]">
               <label className="flex cursor-pointer items-center gap-1.5 px-2">
                 <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} className="accent-accent" />
                 관계선
@@ -178,7 +179,9 @@ export default function Demo() {
               </div>
             </div>
 
-            <div className="absolute left-4 top-4 z-10 flex max-w-[calc(100%-2rem)] flex-col items-start gap-2 text-xs">
+            <div className="absolute left-4 top-4 z-20 flex items-start gap-2 text-xs">
+              <LegendToggle open={legendOpen} onToggle={() => setLegendOpen((open) => !open)} />
+              <div className="relative">
               <button type="button" aria-label={filterOpen ? "연결선 필터 접기" : "연결선 필터 펼치기"}
                 aria-expanded={filterOpen} aria-controls="link-filters" title="연결선 필터"
                 onClick={() => setFilterOpen((open) => !open)}
@@ -188,7 +191,7 @@ export default function Demo() {
                 </svg>
               </button>
               <div id="link-filters" inert={!filterOpen} aria-hidden={!filterOpen}
-                className={`grid w-52 origin-top transition-[grid-template-rows,opacity,transform] duration-300 ease-out motion-reduce:transition-none ${filterOpen ? "grid-rows-[1fr] translate-y-0 opacity-100" : "pointer-events-none grid-rows-[0fr] -translate-y-2 opacity-0"}`}>
+                className={`absolute left-0 top-12 grid w-52 origin-top transition-[grid-template-rows,opacity,transform] duration-300 ease-out motion-reduce:transition-none max-[700px]:top-28 ${filterOpen ? "grid-rows-[1fr] translate-y-0 opacity-100" : "pointer-events-none grid-rows-[0fr] -translate-y-2 opacity-0"}`}>
                 <div className="min-h-0 overflow-hidden">
                   <div className="max-h-[min(50vh,300px)] overflow-y-auto rounded-xl border border-line bg-white/95 p-3 shadow-sm">
                   <fieldset className="space-y-1.5">
@@ -212,6 +215,7 @@ export default function Demo() {
                   {!allLines.length && <p className="text-ink-soft">표시할 연결 자료가 없습니다.</p>}
                   </div>
                 </div>
+              </div>
               </div>
             </div>
 
