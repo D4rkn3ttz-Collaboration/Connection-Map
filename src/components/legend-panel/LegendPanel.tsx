@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { Layout } from "@/lib/layout.ts";
 import { openLegendItems, type LegendItem } from "@/lib/legend.ts";
 import styles from "./legend-panel.module.css";
@@ -65,23 +64,16 @@ function LegendGroup({
 export function LegendPanel({
   openLayout,
   darkLayout,
+  mobileOpen,
+  onMobileOpenChange,
 }: {
   openLayout: Layout | null;
   darkLayout: Layout | null;
+  mobileOpen: boolean;
+  onMobileOpenChange: (open: boolean) => void;
 }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
   return (
     <>
-      <button
-        type="button"
-        className={styles.mobileToggle}
-        aria-expanded={mobileOpen}
-        aria-controls="map-legend"
-        onClick={() => setMobileOpen((open) => !open)}
-      >
-        범례
-      </button>
       <aside
         id="map-legend"
         className={styles.panel}
@@ -94,7 +86,7 @@ export function LegendPanel({
             type="button"
             className={styles.mobileClose}
             aria-label="범례 닫기"
-            onClick={() => setMobileOpen(false)}
+            onClick={() => onMobileOpenChange(false)}
           >
             ×
           </button>
@@ -138,5 +130,19 @@ export function LegendPanel({
         </section>
       </aside>
     </>
+  );
+}
+
+export function LegendToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      className={styles.mobileToggle}
+      aria-expanded={open}
+      aria-controls="map-legend"
+      onClick={onToggle}
+    >
+      범례
+    </button>
   );
 }

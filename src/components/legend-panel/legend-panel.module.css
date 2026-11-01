@@ -156,21 +156,22 @@
   }
 
   .mobileToggle {
-    position: absolute;
-    z-index: 8;
-    top: 75px;
-    left: 25px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    height: 30px;
-    padding: 0 10px;
+    height: 40px;
+    padding: 0 12px;
     border: 1px solid #dce3ed;
-    border-radius: 6px;
-    background: #fff;
+    border-radius: 12px;
+    background: #fffffff2;
     color: #39485c;
-    font-size: 11px;
-    box-shadow: 0 2px 5px #1834590c;
+    font-size: 12px;
+    box-shadow: 0 1px 2px #18345924;
+  }
+
+  .mobileToggle:focus-visible {
+    outline: 2px solid #e5484d;
+    outline-offset: 2px;
   }
 
   .mobileClose {
